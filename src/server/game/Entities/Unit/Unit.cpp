@@ -12252,7 +12252,7 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     else
     {
         missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
-        /* @basemod-begin: remove block */
+        /* @basemod-begin: scaling fix */
         float levelFactor = 60;
         /* @basemod-end */
         if (levelFactor < 10.f)
