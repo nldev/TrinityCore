@@ -2592,34 +2592,29 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     }
 
     /* @basemod-begin: add meleespellhitresult hook */
-    int32 dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
+    float dodgeChance = GetUnitDodgeChance(attType, victim) * 100.0f;
     if (dodgeChance < 0)
         dodgeChance = 0;
 
-    int32 parryChance = int32(GetUnitParryChance(attType, victim) * 100.0f);
+    float parryChance = GetUnitParryChance(attType, victim) * 100.0f;
     if (parryChance < 0)
         parryChance = 0;
 
-    int32 blockChance = int32(GetUnitBlockChance(attType, victim) * 100.0f);
+    float blockChance = GetUnitBlockChance(attType, victim) * 100.0f;
     if (blockChance < 0)
         blockChance = 0;
-
-
-    float dodge_chance_f = float(dodgeChance);
-    float block_chance_f =  float(parryChance);
-    float parry_chance_f = float(blockChance);
 
     FIRE(UnitOnMeleeSpellHitResult
         , TSUnit(const_cast<Unit*>(this))
         , TSUnit(const_cast<Unit*>(victim))
-        , TSMutable<float>(&dodge_chance_f)
-        , TSMutable<float>(&block_chance_f)
-        , TSMutable<float>(&parry_chance_f)
+        , TSMutable<float>(&dodgeChance)
+        , TSMutable<float>(&parryChance)
+        , TSMutable<float>(&blockChance)
         );
 
-    int32 dodge_chance = int32(dodge_chance_f * 100.0f);
-    int32 block_chance = int32(block_chance_f * 100.0f);
-    int32 parry_chance = int32(parry_chance_f * 100.0f);
+    int32 dodge_chance = int32(dodgeChance * 100.0f);
+    int32 parry_chance = int32(parryChance * 100.0f);
+    int32 block_chance = int32(blockChance * 100.0f);
 
     if (canDodge)
     {
