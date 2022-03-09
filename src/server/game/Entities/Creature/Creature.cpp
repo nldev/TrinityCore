@@ -2080,7 +2080,9 @@ float Creature::GetAttackDistance(Unit const* player) const
     float minRadius = (5.0f * sWorld->getRate(RATE_CREATURE_AGGRO));
 
     uint8 expansionMaxLevel = uint8(GetMaxLevelForExpansion(GetCreatureTemplate()->expansion));
-    int32 levelDifference = GetLevel() - player->GetLevel();
+    /* @basemod-begin: disable aggro radius by level */
+    int32 levelDifference = 0;
+    /* @basemod-end */
 
     // The aggro radius for creatures with equal level as the player is 20 yards.
     // The combatreach should not get taken into account for the distance so we drop it from the range (see Supremus as expample)
@@ -2099,8 +2101,11 @@ float Creature::GetAttackDistance(Unit const* player) const
     // The aggro range of creatures with higher levels than the total player level for the expansion should get the maxlevel treatment
     // This makes sure that creatures such as bosses wont have a bigger aggro range than the rest of the npc's
     // The following code is used for blizzlike behaivior such as skippable bosses
+    /* @basemod-begin: disable aggro radius by level */
     if (GetLevel() > expansionMaxLevel)
-        aggroRadius = baseAggroDistance + float(expansionMaxLevel - player->GetLevel());
+    int32 levelDifference = 0;
+        aggroRadius = baseAggroDistance;
+    /* @basemod-end */
 
     // Make sure that we wont go over the total range limits
     if (aggroRadius > maxRadius)
@@ -3210,11 +3215,10 @@ float Creature::GetAggroRange(Unit const* target) const
             targetLevel = target->ToCreature()->GetLevelForTarget(this);
 
         uint32 myLevel = GetLevelForTarget(target);
-        int32 levelDiff = int32(targetLevel) - int32(myLevel);
 
-        // The maximum Aggro Radius is capped at 45 yards (25 level difference)
-        if (levelDiff < -25)
-            levelDiff = -25;
+        /* @basemod-begin: disable aggro radius by level */
+        int32 levelDiff = 0;
+        /* @basemod-end */
 
         // The base aggro radius for mob of same level
         float aggroRadius = 20;

@@ -1389,7 +1389,9 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         {
             damageInfo->HitInfo     |= HITINFO_GLANCING;
             damageInfo->TargetState  = VICTIMSTATE_HIT;
-            int32 leveldif = int32(victim->GetLevelForTarget(this)) - int32(GetLevel());
+            /* @basemod-begin: scaling fix */
+            int32 leveldif = 0;
+            /* @basemod-end */
             if (leveldif < 0)
             {
                 TC_LOG_DEBUG("entities.unit", "Unit::CalculateMeleeDamage: (Player) %s attacked %s. Glancing should never happen against lower level target", GetGUID().ToString().c_str(), victim->GetGUID().ToString().c_str());
@@ -1556,9 +1558,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
         // 20% base chance
         float chance = 20.0f;
 
-        // there is a newbie protection, at level 10 just 7% base chance; assuming linear function
-        if (victim->GetLevel() < 30)
-            chance = 0.65f * victim->GetLevel() + 0.5f;
+        /* @basemod-delete: scaling fix */
 
         uint32 const victimDefense = victim->GetDefenseSkillValue();
         uint32 const attackerMeleeSkill = GetMaxSkillValueForLevel();
@@ -1686,11 +1686,10 @@ void Unit::HandleEmoteCommand(Emote emoteId)
             // no more than 100%
             RoundToInterval(arpPct, 0.f, 100.f);
 
+            /* @basemod-begin: scaling fix */
             float maxArmorPen = 0.f;
-            if (victim->GetLevel() < 60)
-                maxArmorPen = float(400 + 85 * victim->GetLevel());
-            else
-                maxArmorPen = 400 + 85 * victim->GetLevel() + 4.5f * 85 * (victim->GetLevel() - 59);
+            maxArmorPen = 400 + 85 * 60 + 4.5f * 85 * (60 - 59);
+            /* @basemod-end */
 
             // Cap armor penetration to this number
             maxArmorPen = std::min((armor + maxArmorPen) / 3.f, armor);
@@ -1702,7 +1701,9 @@ void Unit::HandleEmoteCommand(Emote emoteId)
     if (armor < 0.0f)
         armor = 0.0f;
 
-    float levelModifier = attacker ? attacker->GetLevel() : attackerLevel;
+    /* @basemod-begin: scaling fix */
+    float levelModifier = 60;
+    /* @basemod-end */
     if (levelModifier > 59.f)
         levelModifier = levelModifier + 4.5f * (levelModifier - 59.f);
 
@@ -1813,12 +1814,16 @@ void Unit::HandleEmoteCommand(Emote emoteId)
 
     // level-based resistance does not apply to binary spells, and cannot be overcome by spell penetration
     // gameobject caster -- should it have level based resistance?
+    /* @basemod-begin: scaling fix */
     if (caster && caster->GetTypeId() != TYPEID_GAMEOBJECT && (!spellInfo || !spellInfo->HasAttribute(SPELL_ATTR0_CU_BINARY_SPELL)))
-        victimResistance += std::max((float(victim->GetLevelForTarget(caster)) - float(caster->GetLevelForTarget(victim))) * 5.0f, 0.0f);
+        victimResistance += 0;
+    /* @basemod-end */
 
     static uint32 const BOSS_LEVEL = 83;
     static float const BOSS_RESISTANCE_CONSTANT = 510.0f;
-    uint32 level = victim->GetLevel();
+    /* @basemod-begin: scaling fix */
+    uint32 level = 60;
+    /* @basemod-end */
     float resistanceConstant = 0.0f;
 
     if (level == BOSS_LEVEL)
@@ -2301,23 +2306,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     }
 
     // 4. GLANCING
-    // Max 40% chance to score a glancing blow against mobs of the same or higher level (only players and pets, not for ranged weapons).
-    if ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
-        victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet() &&
-        GetLevel() <= victim->GetLevelForTarget(this))
-    {
-        // cap possible value (with bonuses > max skill)
-        int32 skill = attackerWeaponSkill;
-        int32 maxskill = attackerMaxSkillValueForLevel;
-        skill = (skill > maxskill) ? maxskill : skill;
-
-        // against boss-level targets - 24% chance of 25% average damage reduction (damage reduction range : 20-30%)
-        // against level 82 elites - 18% chance of 15% average damage reduction (damage reduction range : 10-20%)
-        tmp = 600 + (victimDefenseSkill - skill) * 120;
-        tmp = std::min(tmp, 4000);
-        if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_GLANCING;
-    }
+    /* @basemod-delete: remove glancing blow */
 
     // 5. BLOCK
     if (canParryOrBlock)
@@ -2334,26 +2323,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         return MELEE_HIT_CRIT;
 
     // 7. CRUSHING
-    // mobs can score crushing blows if they're 4 or more levels above victim
-    if (GetLevelForTarget(victim) >= victim->GetLevelForTarget(this) + 4 &&
-        // can be from by creature (if can) or from controlled player that considered as creature
-        !IsControlledByPlayer() &&
-        !(GetTypeId() == TYPEID_UNIT && ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS))
-    {
-        // when their weapon skill is 15 or more above victim's defense skill
-        tmp = victimDefenseSkill;
-        // having defense above your maximum (from items, talents etc.) has no effect
-        tmp = std::min(tmp, victimMaxSkillValueForLevel);
-        // tmp = mob's level * 5 - player's current defense skill
-        tmp = attackerMaxSkillValueForLevel - tmp;
-        // minimum of 20 points diff (4 levels difference)
-        tmp = std::max(tmp, 20);
-
-        // add 2% chance per lacking skill point
-        tmp = tmp * 200 - 1500;
-        if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_CRUSHING;
-    }
+    /* basemod delete: remove crushing blow */
 
     // 8. HIT
     return MELEE_HIT_NORMAL;
@@ -2415,10 +2385,9 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
 float Unit::CalculateSpellpowerCoefficientLevelPenalty(SpellInfo const* spellInfo) const
 {
     float result;
-    if (!spellInfo->MaxLevel || GetLevel() < spellInfo->MaxLevel)
-        result = 1.0f;
-    else
-        result = std::max(0.0f, std::min(1.0f, (22.0f + spellInfo->MaxLevel - GetLevel()) / 20.0f));
+    /* @basemod-begin: scaling fix */
+    result = std::max(0.0f, std::min(1.0f, (22.0f + 60 / 20.0f)));
+    /* @basemod-end: scaling fix */
     FIRE_MAP(
           spellInfo->events
         , SpellOnCalcSpellPowerLevelPenalty
@@ -2622,13 +2591,39 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
         }
     }
 
+    /* @basemod-begin: add meleespellhitresult hook */
+    int32 dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.f);
+    if (dodgeChance < 0)
+        dodgeChance = 0;
+
+    int32 parryChance = int32(GetUnitParryChance(attType, victim) * 100.f);
+    if (parryChance < 0)
+        parryChance = 0;
+
+    int32 blockChance = int32(GetUnitBlockChance(attType, victim) * 100.f);
+    if (blockChance < 0)
+        blockChance = 0;
+
+    float dodge_chance_f = float(dodgeChance);
+    float parry_chance_f = float(parryChance);
+    float block_chance_f = float(blockChance);
+
+    FIRE(UnitOnMeleeSpellHitResult
+        , TSUnit(const_cast<Unit*>(this))
+        , TSUnit(const_cast<Unit*>(victim))
+        , TSMutable<float>(&dodge_chance_f)
+        , TSMutable<float>(&parry_chance_f)
+        , TSMutable<float>(&block_chance_f)
+        , attType
+        );
+
+    int32 dodge_chance = int32(dodgeChance * 100.0f);
+    int32 parry_chance = int32(parryChance * 100.0f);
+    int32 block_chance = int32(blockChance * 100.0f);
+
     if (canDodge)
     {
         // Roll dodge
-        int32 dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
-        if (dodgeChance < 0)
-            dodgeChance = 0;
-
         if (roll < (tmp += dodgeChance))
             return SPELL_MISS_DODGE;
     }
@@ -2636,10 +2631,6 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (canParry)
     {
         // Roll parry
-        int32 parryChance = int32(GetUnitParryChance(attType, victim) * 100.0f);
-        if (parryChance < 0)
-            parryChance = 0;
-
         tmp += parryChance;
         if (roll < tmp)
             return SPELL_MISS_PARRY;
@@ -2647,14 +2638,12 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     if (canBlock)
     {
-        int32 blockChance = int32(GetUnitBlockChance(attType, victim) * 100.0f);
-        if (blockChance < 0)
-            blockChance = 0;
+        // Roll block
         tmp += blockChance;
-
         if (roll < tmp)
             return SPELL_MISS_BLOCK;
     }
+    /* @basemod-end */
 
     return SPELL_MISS_NONE;
 }
@@ -2869,9 +2858,11 @@ float Unit::GetUnitCriticalChanceDone(WeaponAttackType attackType) const
 
 float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType attackType, float critDone) const
 {
+    /* @basemod-begin: scaling fix */
     int32 const attackerWeaponSkill = attacker->GetWeaponSkillValue(attackType, this);
     int32 const victimDefenseSkill = GetDefenseSkillValue(attacker);
     int32 const skillDiff = victimDefenseSkill - attackerWeaponSkill;
+    /* @basemod-end */
 
     float skillBonus = 0.0f;
     float chance = critDone;
@@ -2919,47 +2910,9 @@ float Unit::GetUnitCriticalChanceAgainst(WeaponAttackType attackType, Unit const
 
 uint32 Unit::GetWeaponSkillValue(WeaponAttackType attType, Unit const* target) const
 {
-    uint32 value = 0;
-    if (Player const* player = ToPlayer())
-    {
-        Item* item = player->GetWeaponForAttack(attType, true);
-
-        // feral or unarmed skill only for base attack
-        if (attType != BASE_ATTACK && !item)
-            return 0;
-
-        if (IsInFeralForm())
-            return GetMaxSkillValueForLevel();              // always maximized SKILL_FERAL_COMBAT in fact
-
-        // weapon skill or (unarmed for base attack)
-        uint32 skill = SKILL_UNARMED;
-        if (item)
-            skill = item->GetSkill();
-
-        // in PvP use full skill instead current skill value
-        value = (target && target->IsControlledByPlayer())
-            ? player->GetMaxSkillValue(skill)
-            : player->GetSkillValue(skill);
-        // Modify value from ratings
-        value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL));
-        switch (attType)
-        {
-            case BASE_ATTACK:
-                value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL_MAINHAND));
-                break;
-            case OFF_ATTACK:
-                value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL_OFFHAND));
-                break;
-            case RANGED_ATTACK:
-                value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL_RANGED));
-                break;
-            default:
-                break;
-        }
-    }
-    else
-        value = GetMaxSkillValueForLevel(target);
-    return value;
+    /* @basemod-begin: scaling fix */
+    return 60 * 5;
+    /* @basemod-end */
 }
 
 void Unit::_DeleteRemovedAuras()
@@ -7316,13 +7269,7 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                         }
                         break;
                 }
-
-                // Spell crit suppression
-                if (GetTypeId() == TYPEID_UNIT)
-                {
-                    int32 const levelDiff = static_cast<int32>(GetLevelForTarget(caster)) - caster->GetLevel();
-                    crit_chance -= levelDiff * 0.7f;
-                }
+                /* @basemod-delete: scaling fix */
             }
             break;
         }
@@ -12325,7 +12272,9 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     else
     {
         missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
-        float levelFactor = victim->GetLevelForTarget(this);
+        /* @basemod-begin: scaling fix */
+        float levelFactor = 60;
+        /* @basemod-end */
         if (levelFactor < 10.f)
             missChance *= (levelFactor / 10.f);
     }
@@ -13272,11 +13221,9 @@ void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
 {
     float addRage;
 
-    float rageconversion = ((0.0091107836f * GetLevel() * GetLevel()) + 3.225598133f * GetLevel()) + 4.2652911f;
-
-    // Unknown if correct, but lineary adjust rage conversion above level 70
-    if (GetLevel() > 70)
-        rageconversion += 13.27f * (GetLevel() - 70);
+    /* @basemod-begin: scaling fix */
+    float rageconversion = ((0.0091107836f * 60 * 60) + 3.225598133f * 60) + 4.2652911f;
+    /* @basemod-end */
 
     if (attacker)
     {

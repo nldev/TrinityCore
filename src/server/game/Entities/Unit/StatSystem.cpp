@@ -580,7 +580,9 @@ void LoadAPFormulas()
 void Player::UpdateAttackPowerAndDamage(bool ranged)
 {
     float val2 = 0.0f;
-    float level = float(GetLevel());
+    /* @basemod-begin: fix scaling */
+    float level = 60;
+    /* @basemod-end */
 
     UnitMods unitMod = ranged ? UNIT_MOD_ATTACK_POWER_RANGED : UNIT_MOD_ATTACK_POWER;
 
@@ -673,13 +675,14 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
                 }
 
                 switch (GetShapeshiftForm())
+                /* @basemod-begin: fix scaling */
                 {
                     case FORM_CAT:
-                        val2 = GetLevel() * levelBonus + GetStat(STAT_STRENGTH) * 2.0f + GetStat(STAT_AGILITY) - 20.0f + weaponBonus + m_baseFeralAP;
+                        val2 = 60 * levelBonus + GetStat(STAT_STRENGTH) * 2.0f + GetStat(STAT_AGILITY) - 20.0f + weaponBonus + m_baseFeralAP;
                         break;
                     case FORM_BEAR:
                     case FORM_DIREBEAR:
-                        val2 = GetLevel() * levelBonus + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + weaponBonus + m_baseFeralAP;
+                        val2 = 60 * levelBonus + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + weaponBonus + m_baseFeralAP;
                         break;
                     case FORM_MOONKIN:
                         val2 = GetStat(STAT_STRENGTH) * 2.0f - 20.0f + m_baseFeralAP;
@@ -688,6 +691,7 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
                         val2 = GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
                         break;
                 }
+                /* @basemod-end */
                 break;
             }
             case CLASS_MAGE:
@@ -822,7 +826,9 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
     // check if player is druid and in cat or bear forms
     if (IsInFeralForm())
     {
-        uint8 lvl = GetLevel();
+        /* @basemod-begin: fix scaling */
+        uint8 lvl = 60;
+        /* @basemod-end */
         if (lvl > 60)
             lvl = 60;
 

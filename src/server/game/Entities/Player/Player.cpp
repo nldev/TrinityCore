@@ -870,7 +870,9 @@ void Player::HandleDrowning(uint32 time_diff)
                 m_MirrorTimer[BREATH_TIMER] += 1 * IN_MILLISECONDS;
                 // Calculate and deal damage
                 /// @todo Check this formula
-                uint32 damage = GetMaxHealth() / 5 + urand(0, GetLevel() - 1);
+                /* @basemod-begin: scaling fix */
+                uint32 damage = GetMaxHealth() / 5 + urand(0, 60);
+                /* @basemod-end */
                 EnvironmentalDamage(DAMAGE_DROWNING, damage);
             }
             else if (!(m_MirrorTimerFlagsLast & UNDERWATER_INWATER))      // Update time in client if need
@@ -906,7 +908,9 @@ void Player::HandleDrowning(uint32 time_diff)
                 m_MirrorTimer[FATIGUE_TIMER] += 1 * IN_MILLISECONDS;
                 if (IsAlive())                                            // Calculate and deal damage
                 {
-                    uint32 damage = GetMaxHealth() / 5 + urand(0, GetLevel() - 1);
+                    /* @basemod-begin: scaling fix */
+                    uint32 damage = GetMaxHealth() / 5 + urand(0, 60);
+                    /* @basemod-end */
                     EnvironmentalDamage(DAMAGE_EXHAUSTED, damage);
                 }
                 else if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))       // Teleport ghost to graveyard
@@ -2096,8 +2100,7 @@ void Player::Regenerate(Powers power)
             bool recentCast = IsUnderLastManaUseEffect();
             float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
 
-            if (GetLevel() < 15)
-                ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
+            /* @basemod-delete: scaling fix */
 
             if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
                 addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
@@ -2200,8 +2203,7 @@ void Player::RegenerateHealth()
 
     float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
 
-    if (GetLevel() < 15)
-        HealthIncreaseRate = sWorld->getRate(RATE_HEALTH) * (2.066f - (GetLevel() * 0.066f));
+    /* @basemod-delete: scaling fix */
 
     float addValue = 0.0f;
 
@@ -2693,42 +2695,10 @@ bool Player::IsMaxLevel() const
 
 void Player::InitTalentForLevel()
 {
-    uint8 level = GetLevel();
-    // talents base at level diff (talents = level - 9 but some can be used already)
-    if (level < 10)
-    {
-        // Remove all talent points
-        if (m_usedTalentCount > 0)                           // Free any used talents
-        {
-            ResetTalents(true); /// @todo: Has to (collectively) be renamed to ResetTalents
-            SetFreeTalentPoints(0);
-        }
-    }
-    else
-    {
-        if (level < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL) || m_specsCount == 0)
-        {
-            m_specsCount = 1;
-            m_activeSpec = 0;
-        }
-
-        uint32 talentPointsForLevel = CalculateTalentsPoints();
-
-        // if used more that have then reset
-        if (m_usedTalentCount > talentPointsForLevel)
-        {
-            if (!GetSession()->HasPermission(rbac::RBAC_PERM_SKIP_CHECK_MORE_TALENTS_THAN_ALLOWED))
-                ResetTalents(true);
-            else
-                SetFreeTalentPoints(0);
-        }
-        // else update amount of free points
-        else
-            SetFreeTalentPoints(talentPointsForLevel - m_usedTalentCount);
-    }
-
-    if (!GetSession()->PlayerLoading())
-        SendTalentsInfoData(false);                         // update at client
+    /* @basemod-begin: remove talents */
+    ResetTalents(true); /// @todo: Has to (collectively) be renamed to ResetTalents
+    SetFreeTalentPoints(0);
+    /* @basemod-end */
 }
 
 void Player::InitStatsForLevel(bool reapplyMods)
@@ -4626,32 +4596,9 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
     // recast lost by death auras of any items held in the inventory
     CastAllObtainSpells();
 
-    if (!applySickness)
-        return;
-
-    //Characters from level 1-10 are not affected by resurrection sickness.
-    //Characters from level 11-19 will suffer from one minute of sickness
-    //for each level they are above 10.
-    //Characters level 20 and up suffer from ten minutes of sickness.
-    int32 startLevel = sWorld->getIntConfig(CONFIG_DEATH_SICKNESS_LEVEL);
-    ChrRacesEntry const* raceEntry = sChrRacesStore.AssertEntry(GetRace());
-
-    if (int32(GetLevel()) >= startLevel)
-    {
-        // set resurrection sickness
-        CastSpell(this, raceEntry->ResSicknessSpellID, true);
-
-        // not full duration
-        if (int32(GetLevel()) < startLevel+9)
-        {
-            int32 delta = (int32(GetLevel()) - startLevel + 1)*MINUTE;
-
-            if (Aura* aur = GetAura(raceEntry->ResSicknessSpellID, GetGUID()))
-            {
-                aur->SetDuration(delta*IN_MILLISECONDS);
-            }
-        }
-    }
+    /* @basemod-begin: remove resurrection sickness */
+    return;
+    /* @basemod-end */
 }
 
 void Player::RemoveGhoul()
@@ -5353,7 +5300,9 @@ uint32 Player::GetShieldBlockValue() const
 
 float Player::GetMeleeCritFromAgility() const
 {
-    uint8 level = GetLevel();
+    /* @basemod-begin: scaling fix */
+    uint8 level = 60;
+    /* @basemod-end */
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5413,7 +5362,9 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
 {
 // @tswow-end
 
-    uint8 level = GetLevel();
+    /* @basemod-begin: scaling fix */
+    uint8 level = 60;
+    /* basemod-end */
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5435,7 +5386,9 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
 
 float Player::GetSpellCritFromIntellect() const
 {
-    uint8 level = GetLevel();
+    /* @basemod-begin: scaling fix */
+    uint8 level = 60;
+    /* basemod-end */
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5452,7 +5405,9 @@ float Player::GetSpellCritFromIntellect() const
 
 float Player::GetRatingMultiplier(CombatRating cr) const
 {
-    uint8 level = GetLevel();
+    /* basemod-begin: scaling fix */
+    uint8 level = 60;
+    /* basemod-end */
 
     if (level > GT_MAX_LEVEL)
         level = GT_MAX_LEVEL;
@@ -5487,7 +5442,9 @@ float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 
 float Player::OCTRegenHPPerSpirit() const
 {
-    uint8 level = GetLevel();
+    /* @basemod-begin: scaling fix */
+    uint8 level = 60;
+    /* @basemod-end */
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5510,7 +5467,9 @@ float Player::OCTRegenHPPerSpirit() const
 
 float Player::OCTRegenMPPerSpirit() const
 {
-    uint8 level = GetLevel();
+    /* @basemod-begin: scaling fix */
+    uint8 level = 60;
+    /* @basemod-end */
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5943,24 +5902,26 @@ void Player::UpdateWeaponSkill(Unit* victim, WeaponAttackType attType)
 
 void Player::UpdateCombatSkills(Unit* victim, WeaponAttackType attType, bool defense)
 {
+    /* @basemod-begin: scaling fix */
+    uint8 level = 60;
     uint8 plevel = GetLevel();                              // if defense than victim == attacker
     // @tswow-begin
     uint8 greylevel = Trinity::XP::GetGrayLevel(this,plevel);
     // @tswow-end
-    uint8 moblevel = victim->GetLevelForTarget(this);
+    uint8 moblevel = 60;
 
-    if (moblevel > plevel + 5)
-        moblevel = plevel + 5;
+    if (moblevel > level + 5)
+        moblevel = level + 5;
 
     uint8 lvldif = moblevel - greylevel;
     if (lvldif < 3)
         lvldif = 3;
 
-    uint32 skilldif = 5 * plevel - (defense ? GetBaseDefenseSkillValue() : GetBaseWeaponSkillValue(attType));
+    uint32 skilldif = 5 * level - (defense ? GetBaseDefenseSkillValue() : GetBaseWeaponSkillValue(attType));
     if (skilldif <= 0)
         return;
 
-    float chance = float(3 * lvldif * skilldif) / plevel;
+    float chance = float(3 * lvldif * skilldif) / level;
     if (!defense)
         if (GetClass() == CLASS_WARRIOR || GetClass() == CLASS_ROGUE)
             chance += chance * 0.02f * GetStat(STAT_INTELLECT);
@@ -5976,6 +5937,7 @@ void Player::UpdateCombatSkills(Unit* victim, WeaponAttackType attType, bool def
     }
     else
         return;
+    /* @basemod-end */
 }
 
 void Player::ModifySkillBonus(uint32 skillid, int32 val, bool talent)
@@ -8135,19 +8097,18 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
                 Unit* target = spellInfo->IsPositive() ? this : damageInfo.GetVictim();
 
                 CastSpellExtraArgs args(item);
+                /* @basemod-begin: scaling fix */
                 // reduce effect values if enchant is limited
-                if (entry && (entry->AttributesMask & ENCHANT_PROC_ATTR_LIMIT_60) && target->GetLevel() > 60)
+                if (entry && (entry->AttributesMask & ENCHANT_PROC_ATTR_LIMIT_60))
                 {
-                    int32 const lvlDifference = target->GetLevel() - 60;
-                    int32 const lvlPenaltyFactor = 4; // 4% lost effectiveness per level
-
-                    int32 const effectPct = std::max(0, 100 - (lvlDifference * lvlPenaltyFactor));
+                    int32 const effectPct = std::max(0, 100);
 
                     for (SpellEffectInfo const& spellEffectInfo : spellInfo->GetEffects())
                         if (spellEffectInfo.IsEffect())
                             args.AddSpellMod(static_cast<SpellValueMod>(SPELLVALUE_BASE_POINT0 + spellEffectInfo.EffectIndex), CalculatePct(spellEffectInfo.CalcValue(this), effectPct));
                 }
                 CastSpell(target, spellInfo->Id, args);
+                /* @basemod-end */
             }
         }
     }
@@ -8717,8 +8678,10 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                         loot->FillLoot(lootid, LootTemplates_Pickpocketing, this, true);
 
                     // Generate extra money for pick pocket loot
-                    const uint32 a = urand(0, creature->GetLevel() / 2);
-                    const uint32 b = urand(0, GetLevel() / 2);
+                    /* @basemod-begin: scaling fix */
+                    const uint32 a = urand(0, 60 / 2);
+                    const uint32 b = urand(0, 60 / 2);
+                    /* @basemod-end */
                     loot->gold = uint32(10 * (a + b) * sWorld->getRate(RATE_DROP_MONEY));
                     permission = OWNER_PERMISSION;
                     // @tswow-begin
@@ -25268,18 +25231,9 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
 
 uint32 Player::CalculateTalentsPoints() const
 {
-    uint32 base_talent = GetLevel() < 10 ? 0 : GetLevel()-9;
-
-    if (GetClass() != CLASS_DEATH_KNIGHT || GetMapId() != 609)
-        return uint32(base_talent * sWorld->getRate(RATE_TALENT));
-
-    uint32 talentPointsForLevel = GetLevel() < 56 ? 0 : GetLevel() - 55;
-    talentPointsForLevel += m_questRewardTalentCount;
-
-    if (talentPointsForLevel > base_talent)
-        talentPointsForLevel = base_talent;
-
-    return uint32(talentPointsForLevel * sWorld->getRate(RATE_TALENT));
+    /* @basemod-begin: remove talents */
+    return 0;
+    /* @basemod-end */
 }
 
 bool Player::CanFlyInZone(uint32 mapid, uint32 zone, SpellInfo const* bySpell) const
