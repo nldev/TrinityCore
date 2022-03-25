@@ -2859,10 +2859,13 @@ void Spell::EffectEnchantItemTmp()
     }
 
     // select enchantment duration
-    uint32 duration;
+    // @basemod-begin: allow item enchants to specify a duration
+    uint32 duration = m_spellInfo->GetDuration();
 
     // rogue family enchantments exception by duration
-    if (m_spellInfo->Id == 38615)
+    if (duration)
+        duration = duration;
+    else if (m_spellInfo->Id == 38615)
         duration = 1800;                                    // 30 mins
     // other rogue family enchantments always 1 hour (some have spell damage=0, but some have wrong data in EffBasePoints)
     else if (m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE)
@@ -2886,6 +2889,7 @@ void Spell::EffectEnchantItemTmp()
     // default case
     else
         duration = 3600;                                    // 1 hour
+    // @basemod-end
 
     // item can be in trade slot and have owner diff. from caster
     Player* item_owner = itemTarget->GetOwner();

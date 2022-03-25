@@ -5442,6 +5442,7 @@ float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 
 float Player::OCTRegenHPPerSpirit() const
 {
+    // @BASEMOD-FIXME
     /* @basemod-begin: scaling fix */
     uint8 level = 60;
     /* @basemod-end */
@@ -5467,6 +5468,7 @@ float Player::OCTRegenHPPerSpirit() const
 
 float Player::OCTRegenMPPerSpirit() const
 {
+    // @BASEMOD-FIXME
     /* @basemod-begin: scaling fix */
     uint8 level = 60;
     /* @basemod-end */
