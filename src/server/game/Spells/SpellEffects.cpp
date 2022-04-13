@@ -2887,6 +2887,9 @@ void Spell::EffectEnchantItemTmp()
     else
         duration = 3600;                                    // 1 hour
 
+    // FIXME hook here
+    duration = 0;
+
     // item can be in trade slot and have owner diff. from caster
     Player* item_owner = itemTarget->GetOwner();
     if (!item_owner)
