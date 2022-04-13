@@ -22,6 +22,11 @@ Comment: All reload related commands
 Category: commandscripts
 EndScriptData */
 
+// @tswow-begin
+#include "TSLibLoader.h"
+#include "TSLua.h"
+#include "Config.h"
+// @tswow-end
 #include "ScriptMgr.h"
 #include "AccountMgr.h"
 #include "AchievementMgr.h"
@@ -171,6 +176,8 @@ public:
             { "vehicle_template_accessory",    rbac::RBAC_PERM_COMMAND_RELOAD_VEHICLE_TEMPLATE_ACCESSORY,       true,  &HandleReloadVehicleTemplateAccessoryCommand,   "" },
             // @tswow-begin
             { "spell_autolearn",               rbac::RBAC_PERM_COMMAND_RELOAD_SPELL_AUTOLEARN,                  true,  &HandleReloadSpellAutolearnCommand,             "" },
+            { "livescripts",                   rbac::RBAC_PERM_COMMAND_RELOAD_LIVESCRIPTS,                      true,  &HandleReloadLivescripts,                       "" },
+            { "lua",                           rbac::RBAC_PERM_COMMAND_RELOAD_LUA,                              true,  &HandleReloadLua,                               "" },
             // @tswow-end
         };
         static std::vector<ChatCommand> commandTable =
@@ -179,6 +186,35 @@ public:
         };
         return commandTable;
     }
+
+    // @tswow-begin
+    static bool HandleReloadLivescripts(ChatHandler* /*handler*/, char const* args)
+    {
+        UpdateTSLibraries(std::string(args) == "force");
+        return true;
+    }
+
+    static bool HandleReloadLua(ChatHandler* handler, char const* args)
+    {
+        if (sConfigMgr->GetBoolDefault("TSWoW.EnableLua", false))
+        {
+            TSLuaState::Load();
+            if (handler)
+            {
+                handler->SendGlobalGMSysMessage("All lua scripts reloaded.");
+            }
+            return true;
+        }
+        else
+        {
+            if (handler)
+            {
+                handler->SendGlobalGMSysMessage("Lua is disabled, please set \"TSWoW.EnableLua\" to true in your worldserver.conf.");
+            }
+            return false;
+        }
+    }
+    // @tswow-end
 
     //reload commands
     static bool HandleReloadGMTicketsCommand(ChatHandler* /*handler*/, char const* /*args*/)

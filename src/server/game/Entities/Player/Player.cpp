@@ -107,7 +107,6 @@
 #include "WorldSession.h"
 #include "WorldStatePackets.h"
 // @tswow-begin
-#include "TSMacros.h"
 #include "TSEvents.h"
 #include "TSQuest.h"
 #include "TSPlayer.h"
@@ -12384,7 +12383,7 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
 
     // @tswow-begin
     FIRE_MAP(
-          pItem2->GetTemplate()->events
+          pItem->GetTemplate()->events
         , ItemOnEquip
         , TSItem(pItem)
         , TSPlayer(this)
@@ -27310,4 +27309,12 @@ void Player::ApplyAutolearnSpells(uint32 fromLevel)
         }
     }
 }
+
+void Player::SetSelection(ObjectGuid guid) {
+    uint64_t old = GetGuidValue(UNIT_FIELD_TARGET).GetRawValue();
+    SetGuidValue(UNIT_FIELD_TARGET, guid);
+    FIRE(UnitOnSetTarget, TSUnit(this), guid.GetRawValue(), old);
+}
+
+
 // @tswow-end

@@ -24,6 +24,7 @@
 #include "Packets/QueryPackets.h"
 
 // @tswow-begin
+#include "TSEvents.h"
 #include "TSMutable.h"
 #include "TSItemTemplate.h"
 // @tswow-end
@@ -55,9 +56,14 @@ bool ItemTemplate::CanChangeEquipStateInCombat() const
     }
 
     // @tswow-begin
-    bool val = false;
-    FIRE_MAP(events, ItemOnCanChangeEquipState, TSItemTemplate(this), TSMutable<bool>(&val));
-    return val;
+    bool canChange = false;
+    FIRE_MAP(
+          this->events
+        , ItemOnCanChangeEquipState
+        , TSItemTemplate(this)
+        , TSMutable<bool>(&canChange)
+    );
+    return canChange;
     // @tswow-end
 }
 
@@ -287,3 +293,15 @@ WorldPacket ItemTemplate::BuildQueryData(LocaleConstant loc) const
     response.ShrinkToFit();
     return response.Move();
 }
+
+// @tswow-begin
+WorldPacket* ItemTemplate::GetQueryData(uint32 index)
+{
+    if (m_isDirty)
+    {
+        InitializeQueryData();
+        m_isDirty = false;
+    }
+    return &QueryData[index];
+}
+// @tswow-end

@@ -19,6 +19,11 @@
     \ingroup world
 */
 
+// @tswow-begin
+#include "TSLibLoader.h"
+#include "TSEventLoader.h"
+#include "TSLua.h"
+// @tswow-end
 #include "World.h"
 #include "AccountMgr.h"
 #include "AchievementMgr.h"
@@ -490,6 +495,11 @@ void World::LoadConfigSettings(bool reload)
         sLog->LoadFromConfig();
         sMetric->LoadFromConfigs();
     }
+
+    ///- Should lua be enabled?
+    // @tswow-begin
+    m_bool_configs[CONFIG_TSWOW_LUA_ENABLED] = sConfigMgr->GetBoolDefault("TSWoW.EnableLua", false);
+    // @tswow-en
 
     ///- Read the player limit and the Message of the day from the config file
     SetPlayerAmountLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
@@ -1434,7 +1444,14 @@ void World::LoadConfigSettings(bool reload)
     m_bool_configs[CONFIG_SHOW_KICK_IN_WORLD] = sConfigMgr->GetBoolDefault("ShowKickInWorld", false);
     m_bool_configs[CONFIG_SHOW_MUTE_IN_WORLD] = sConfigMgr->GetBoolDefault("ShowMuteInWorld", false);
     m_bool_configs[CONFIG_SHOW_BAN_IN_WORLD] = sConfigMgr->GetBoolDefault("ShowBanInWorld", false);
-    m_int_configs[CONFIG_NUMTHREADS] = sConfigMgr->GetIntDefault("MapUpdate.Threads", 1);
+    // @tswow-begin - only allow one thread if using lua
+    uint32 mapUpdateThreads = m_int_configs[CONFIG_NUMTHREADS] = sConfigMgr->GetIntDefault("MapUpdate.Threads", 1);
+    if (m_int_configs[CONFIG_TSWOW_LUA_ENABLED] && mapUpdateThreads > 1)
+    {
+        m_int_configs[CONFIG_NUMTHREADS] = 1;
+        TC_LOG_ERROR("server.loading", "MapUpdate.Threads cannot be %i when TSWoW Lua is enabled. Set to 1.", mapUpdateThreads);
+    }
+    // @tswow-end
     m_int_configs[CONFIG_MAX_RESULTS_LOOKUP_COMMANDS] = sConfigMgr->GetIntDefault("Command.LookupMaxResults", 0);
 
     // Warden
@@ -1766,6 +1783,11 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Items...");                         // must be after LoadRandomEnchantmentsTable and LoadPageTexts
     sObjectMgr->LoadItemTemplates();
+
+    // @tswow-begin
+    TC_LOG_INFO("server.loading", "Loading Custom Items...");
+    sObjectMgr->LoadCustomItemTemplates();
+    // @tswow-end
 
     TC_LOG_INFO("server.loading", "Loading Item set names...");                // must be after LoadItemPrototypes
     sObjectMgr->LoadItemSetNames();
@@ -2115,6 +2137,17 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Creature Text Locales...");
     sCreatureTextMgr->LoadCreatureTextLocales();
+
+    // @tswow-begin
+    sScriptMgr->SetScriptContext("tswow");
+    TSInitializeEvents();
+    UpdateTSLibraries(false);
+    sScriptMgr->SwapScriptContext(true);
+    if (sConfigMgr->GetBoolDefault("TSWoW.EnableLua", false))
+    {
+        TSLuaState::Load();
+    }
+    // @tswow-end
 
     TC_LOG_INFO("server.loading", "Initializing Scripts...");
     sScriptMgr->Initialize();

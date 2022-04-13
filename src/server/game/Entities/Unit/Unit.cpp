@@ -86,7 +86,6 @@
 #include "TSCreature.h"
 #include "TSSpellInfo.h"
 #include "TSSpell.h"
-#include "TSMacros.h"
 #include "TSBossAI.h"
 // @tswow-end
 
@@ -1003,7 +1002,9 @@ void Unit::CastStop(uint32 except_spellid)
             InterruptSpell(CurrentSpellTypes(i), false);
 }
 
-void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 damage, SpellInfo const* spellInfo, WeaponAttackType attackType, bool crit, Spell* spell /*= nullptr*/)
+// @tswow-begin effect mask
+void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 damage, SpellInfo const* spellInfo, WeaponAttackType attackType, bool crit, Spell* spell /*= nullptr*/, uint32 effectMask)
+// @tswow-end
 {
     if (damage < 0)
         return;
@@ -1024,6 +1025,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
         , TSSpellDamageInfo(damageInfo)
         , attackType
         , crit
+        , effectMask
     );
     // @tswow-end
 
@@ -1148,6 +1150,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
         , TSSpellDamageInfo(damageInfo)
         , attackType
         , crit
+        , effectMask
     );
     // @tswow-end
 }
