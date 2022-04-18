@@ -598,10 +598,11 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
     m_channelTargetEffectMask = 0;
 
     // Determine if spell can be reflected back to the caster
-    // Patch 1.2 notes: Spell Reflection no longer reflects abilities
-    m_canReflect = caster->isType(TYPEMASK_UNIT) && m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && !m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY)
+    /* @basemod begin: remove reflect restrictions */
+    m_canReflect = m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC
         && !m_spellInfo->HasAttribute(SPELL_ATTR1_CANT_BE_REFLECTED) && !m_spellInfo->HasAttribute(SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY)
         && !m_spellInfo->IsPassive();
+    /* @basemod end: remove reflect restrictions */
 
     CleanupTargetList();
     memset(m_effectExecuteData, 0, MAX_SPELL_EFFECTS * sizeof(ByteBuffer*));
@@ -2155,9 +2156,10 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     // If target reflect spell back to caster
     if (targetInfo.MissCondition == SPELL_MISS_REFLECT)
     {
-        // Calculate reflected spell result on caster (shouldn't be able to reflect gameobject spells)
-        Unit* unitCaster = ASSERT_NOTNULL(m_caster->ToUnit());
-        targetInfo.ReflectResult = unitCaster->SpellHitResult(unitCaster, m_spellInfo, false); // can't reflect twice
+        /* @basemod begin: allow reflect spells from gameobjects */
+        Unit* unitCaster = m_caster->IsUnit() ? m_caster->ToUnit() : m_caster->GetOwner();
+        targetInfo.ReflectResult = unitCaster->SpellHitResult(unitCaster, m_spellInfo, true); // can't reflect twice
+        /* @basemod end: allow reflect spells from gameobjects */
 
         // Proc spell reflect aura when missile hits the original target
         target->m_Events.AddEvent(new ProcReflectDelayed(target, m_originalCasterGUID), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
@@ -2417,6 +2419,19 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         uint32 procSpellType = PROC_SPELL_TYPE_NONE;
         uint32 hitMask = PROC_HIT_NONE;
 
+        // @basemod-begin
+        uint32 miss = MissCondition;
+        FIRE_MAP(
+            spell->m_spellInfo->events
+            , SpellOnDetermineHitOutcome
+            , TSSpellInfo(spell->m_spellInfo)
+            , spell->unitTarget
+            , TSMutable<uint32>(&hitMask)
+            , TSMutable<uint32>(&miss)
+        );
+        MissCondition = SpellMissInfo(miss);
+        // @basemod-end
+
         // Spells with this flag cannot trigger if effect is cast on self
         bool const canEffectTrigger = !spell->m_spellInfo->HasAttribute(SPELL_ATTR3_CANT_TRIGGER_PROC) && spell->unitTarget->CanProc() &&
             (spell->CanExecuteTriggersOnHit(EffectMask) || MissCondition == SPELL_MISS_IMMUNE || MissCondition == SPELL_MISS_IMMUNE2);
@@ -2505,7 +2520,9 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
             // Fill base damage struct (unitTarget - is real spell target)
             SpellNonMeleeDamage damageInfo(caster, spell->unitTarget, spell->m_spellInfo->Id, spell->m_spellSchoolMask);
             // Check damage immunity
-            if (spell->unitTarget->IsImmunedToDamage(spell->m_spellInfo))
+            bool isMiss = (MissCondition == SpellMissInfo(7)) || (MissCondition == SpellMissInfo(8));
+            bool isImmune = ((hitMask & PROC_HIT_IMMUNE) != 0) || ((hitMask & PROC_HIT_FULL_RESIST) != 0) || ((hitMask & PROC_HIT_MISS) != 0);
+            if (spell->unitTarget->IsImmunedToDamage(spell->m_spellInfo) || (isMiss && isImmune))
             {
                 hitMask = PROC_HIT_IMMUNE;
                 spell->m_damage = 0;
