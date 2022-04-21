@@ -1132,6 +1132,9 @@ class TC_GAME_API WorldSession
         void HandleCustom(WorldPacket& recvPacket);
         // @tswow-end
 
+        // batching
+        void HandleBatchedAction(WorldPacket& recvPacket);
+
     public:
         QueryCallbackProcessor& GetQueryProcessor() { return _queryProcessor; }
         TransactionCallback& AddTransactionCallback(TransactionCallback&& callback);
