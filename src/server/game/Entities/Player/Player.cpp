@@ -20,7 +20,6 @@
 #include "AchievementMgr.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
-#include "ActionBatchObject.h"
 #include "Bag.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
@@ -416,7 +415,6 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_achievementMgr = new AchievementMgr(this);
     m_reputationMgr = new ReputationMgr(this);
-    m_actionBatchObjects = new ActionBatchObject(this);
 
     m_groupUpdateTimer.Reset(5000);
 }
@@ -454,7 +452,6 @@ Player::~Player()
     delete m_achievementMgr;
     delete m_reputationMgr;
     delete _cinematicMgr;
-    delete m_actionBatchObjects;
 
     sWorld->DecreasePlayerCount();
 }
@@ -1371,13 +1368,6 @@ void Player::Update(uint32 p_time)
     //because we don't want player's ghost teleported from graveyard
     if (IsHasDelayedTeleport() && IsAlive())
         TeleportTo(m_teleport_dest, m_teleport_options);
-
-    m_batchProcessingTimer.Update(p_time);
-    if (m_batchProcessingTimer.Passed())
-    {
-        m_actionBatchObjects->ProcessBatchedObjects();
-        m_batchProcessingTimer.Reset(2000); // confirmed by blueposts
-    }
 }
 
 void Player::setDeathState(DeathState s)
@@ -2959,11 +2949,6 @@ void Player::SendTameFailure(uint8 result)
     WorldPacket data(SMSG_PET_TAME_FAILURE, 1);
     data << uint8(result);
     SendDirectMessage(&data);
-}
-
-void Player::AddBatchAction(WorldPacket & packet)
-{
-    m_actionBatchObjects->CreateBatchObject(packet);
 }
 
 void Player::RemoveMail(uint32 id)
