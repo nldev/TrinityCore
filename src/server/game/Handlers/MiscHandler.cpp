@@ -1603,5 +1603,5 @@ void WorldSession::HandleUpdateMissileTrajectory(WorldPacket& recvPacket)
 
 void WorldSession::HandleBatchedAction(WorldPacket& recv_data)
 {
-  _player->AddBatchAction(recv_data);
+  AddBatchAction(recv_data);
 }

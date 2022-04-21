@@ -60,6 +60,7 @@
 #include "WorldPacket.h"
 #include "WorldSocket.h"
 #include <zlib.h>
+#include "ActionBatchObject.h"
 
 namespace {
 
@@ -147,6 +148,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
     _gameClient(new GameClient(this))
 {
     memset(m_Tutorials, 0, sizeof(m_Tutorials));
+    m_actionBatchObjects = new ActionBatchObject(this);
 
     if (sock)
     {
@@ -174,6 +176,7 @@ WorldSession::~WorldSession()
     delete _RBACData;
 
     delete _gameClient;
+    delete m_actionBatchObjects;
 
     ///- empty incoming packet queue
     WorldPacket* packet = nullptr;
@@ -469,6 +472,13 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
         if (!m_Socket)
             return false;                                       //Will remove this session from the world session map
+    }
+
+    m_batchProcessingTimer.Update(diff);
+    if (m_batchProcessingTimer.Passed())
+    {
+        m_actionBatchObjects->ProcessBatchedObjects();
+        m_batchProcessingTimer.Reset(5000); // confirmed by blueposts
     }
 
     return true;
@@ -1714,3 +1724,8 @@ void WorldSession::HandleCustom(WorldPacket& packet)
         .ReceivePacket(packet.size(),(char*)packet.contents());
 }
 // @tswow-end
+
+void WorldSession::AddBatchAction(WorldPacket& packet)
+{
+    m_actionBatchObjects->CreateBatchObject(packet);
+}

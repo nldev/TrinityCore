@@ -912,9 +912,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
     friend void AddItemToUpdateQueueOf(Item* item, Player* player);
     friend void RemoveItemFromUpdateQueueOf(Item* item, Player* player);
 
-    // Action Batching
-    void AddBatchAction(WorldPacket& packet);
-
     public:
         // @tswow-begin
         TSServerBuffer m_msg_buffer;
@@ -1069,10 +1066,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         std::unordered_set<PetAura const*> m_petAuras;
         void AddPetAura(PetAura const* petSpell);
         void RemovePetAura(PetAura const* petSpell);
-
-        // batching
-        TimeTracker m_batchProcessingTimer;
-        ActionBatchObject * m_actionBatchObjects;
 
         /// Handles said message in regular chat based on declared language and in config pre-defined Range.
         void Say(std::string_view text, Language language, WorldObject const* = nullptr) override;

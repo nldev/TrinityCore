@@ -35,6 +35,7 @@
 #include <memory>
 #include <unordered_map>
 #include <boost/circular_buffer.hpp>
+#include "ActionBatchObject.h"
 
 class Creature;
 class GameClient;
@@ -1134,11 +1135,16 @@ class TC_GAME_API WorldSession
 
         // batching
         void HandleBatchedAction(WorldPacket& recvPacket);
+        void AddBatchAction(WorldPacket& packet);
 
     public:
         QueryCallbackProcessor& GetQueryProcessor() { return _queryProcessor; }
         TransactionCallback& AddTransactionCallback(TransactionCallback&& callback);
         SQLQueryHolderCallback& AddQueryHolderCallback(SQLQueryHolderCallback&& callback);
+
+        // batching
+        TimeTracker m_batchProcessingTimer;
+        ActionBatchObject* m_actionBatchObjects;
 
     private:
         void ProcessQueryCallbacks();
