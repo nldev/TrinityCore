@@ -1471,3 +1471,4 @@ std::string GetOpcodeNameForLogging(Opcodes opcode)
 {
     return GetOpcodeNameForLoggingImpl(opcode);
 }
+

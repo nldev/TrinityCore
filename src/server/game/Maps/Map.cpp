@@ -104,6 +104,8 @@ Map::~Map()
         sMapMgr->DecreaseScheduledScriptCount(m_scriptSchedule.size());
 
     MMAP::MMapFactory::createOrGetMMapManager()->unloadMapInstance(GetId(), i_InstanceId);
+
+    delete m_actionBatchObjects;
 }
 
 bool Map::ExistMap(uint32 mapid, int gx, int gy)
@@ -288,6 +290,7 @@ i_mapExtra(GetMapDataExtra(id)),
 // @tswow-end
 i_scriptLock(false), _respawnCheckTimer(0)
 {
+    m_actionBatchObjects = new ActionBatchObject(this);
     m_parentMap = (_parent ? _parent : this);
     for (unsigned int idx=0; idx < MAX_NUMBER_OF_GRIDS; ++idx)
     {
@@ -310,7 +313,6 @@ i_scriptLock(false), _respawnCheckTimer(0)
     // @tswow-begin
     FIRE_MAP(GetExtraData()->events,MapOnCreate,TSMap(this));
     FIRE_MAP(GetExtraData()->events,MapOnReload,TSMap(this));
-    // @tswow-end
 }
 
 void Map::InitVisibilityDistance()
@@ -933,6 +935,14 @@ void Map::Update(uint32 t_diff)
     TC_METRIC_VALUE("map_gameobjects", uint64(GetObjectsStore().Size<GameObject>()),
         TC_METRIC_TAG("map_id", std::to_string(GetId())),
         TC_METRIC_TAG("map_instanceid", std::to_string(GetInstanceId())));
+
+    // @tswow-end
+    m_batchProcessingTimer.Update(t_diff);
+    if (m_batchProcessingTimer.Passed())
+    {
+        m_actionBatchObjects->ProcessBatchedObjects();
+        m_batchProcessingTimer.Reset(5000); // confirmed by blueposts
+    }
 }
 
 struct ResetNotifier
@@ -4864,4 +4874,9 @@ std::string InstanceMap::GetDebugInfo() const
         << std::boolalpha
         << "ScriptId: " << GetScriptId() << " ScriptName: " << GetScriptName();
     return sstr.str();
+}
+
+void Map::AddBatchAction(WorldPacket& packet, WorldSession* session)
+{
+    // ->AddBatchAction(packet)
 }

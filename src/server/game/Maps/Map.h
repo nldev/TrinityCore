@@ -664,6 +664,11 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
 
         virtual std::string GetDebugInfo() const;
 
+        // batching
+        TimeTracker m_batchProcessingTimer;
+        ActionBatchObject* m_actionBatchObjects;
+        void AddBatchAction(WorldPacket& packet, WorldSession* session);
+
     private:
         void LoadMapAndVMap(int gx, int gy);
         void LoadVMap(int gx, int gy);

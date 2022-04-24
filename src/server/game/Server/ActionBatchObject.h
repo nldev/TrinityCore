@@ -5,21 +5,27 @@
 #include "WorldSession.h"
 #include <queue>
 
+struct BatchData {
+    WorldPacket& data;
+    WorldSession* session;
+    BatchData(WorldPacket& data, WorldSession* session) : data(data), session(session) {}
+};
+
 class TC_GAME_API ActionBatchObject
 {
 public:
-    ActionBatchObject(WorldSession* session);
+    ActionBatchObject(Map* map);
 
-    void CreateBatchObject(WorldPacket& data);
+    void CreateBatchObject(WorldPacket& data, WorldSession* session);
     void ProcessBatchedObjects();
 
-    bool IsPacketBatchable(WorldPacket& data) const;
+    bool IsPacketBatchable(WorldPacket& data, WorldSession* session) const;
 
 private:
     // Packet storage which contains all stored up packets
-    std::queue<WorldPacket> m_packetBatch;
+    std::queue<BatchData> m_packetBatch;
 
     // Player owner who is going to process all batched up packets
-    WorldSession* m_session;
+    Map* m_map;
 };
 #endif // ActionBatchObject_h__

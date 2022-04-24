@@ -607,6 +607,10 @@ class TC_GAME_API WorldSession
         time_t GetCalendarEventCreationCooldown() const { return _calendarEventCreationCooldown; }
         void SetCalendarEventCreationCooldown(time_t cooldown) { _calendarEventCreationCooldown = cooldown; }
 
+        // batching
+        void HandleBatchedAction(WorldPacket& recvPacket);
+        void AddBatchAction(WorldPacket& packet);
+
     public:                                                 // opcodes handlers
 
         void Handle_NULL(WorldPacket& recvPacket);          // not used
@@ -1133,18 +1137,10 @@ class TC_GAME_API WorldSession
         void HandleCustom(WorldPacket& recvPacket);
         // @tswow-end
 
-        // batching
-        void HandleBatchedAction(WorldPacket& recvPacket);
-        void AddBatchAction(WorldPacket& packet);
-
     public:
         QueryCallbackProcessor& GetQueryProcessor() { return _queryProcessor; }
         TransactionCallback& AddTransactionCallback(TransactionCallback&& callback);
         SQLQueryHolderCallback& AddQueryHolderCallback(SQLQueryHolderCallback&& callback);
-
-        // batching
-        TimeTracker m_batchProcessingTimer;
-        ActionBatchObject* m_actionBatchObjects;
 
     private:
         void ProcessQueryCallbacks();

@@ -1598,8 +1598,7 @@ void WorldSession::HandleUpdateMissileTrajectory(WorldPacket& recvPacket)
         recvPacket.SetOpcode(opcode);
         HandleMovementOpcodes(recvPacket);
     }
-}   
-
+}
 
 void WorldSession::HandleBatchedAction(WorldPacket& recv_data)
 {
