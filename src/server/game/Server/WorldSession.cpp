@@ -1718,5 +1718,5 @@ void WorldSession::HandleCustom(WorldPacket& packet)
 
 void WorldSession::AddBatchAction(WorldPacket& packet)
 {
-    _player->m_mapRef->AddBatchAction(packet, this);
+    GetPlayer()->GetMap()->AddBatchAction(packet, this);
 }

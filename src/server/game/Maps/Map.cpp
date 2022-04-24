@@ -290,7 +290,7 @@ i_mapExtra(GetMapDataExtra(id)),
 // @tswow-end
 i_scriptLock(false), _respawnCheckTimer(0)
 {
-    m_actionBatchObjects = new ActionBatchObject(this);
+    m_actionBatchObjects = new ActionBatchObject();
     m_parentMap = (_parent ? _parent : this);
     for (unsigned int idx=0; idx < MAX_NUMBER_OF_GRIDS; ++idx)
     {
@@ -926,6 +926,13 @@ void Map::Update(uint32 t_diff)
     if (!m_mapRefManager.isEmpty() || !m_activeNonPlayers.empty())
         ProcessRelocationNotifies(t_diff);
 
+    m_batchProcessingTimer.Update(t_diff);
+    if (m_batchProcessingTimer.Passed())
+    {
+        m_actionBatchObjects->ProcessBatchedObjects();
+        m_batchProcessingTimer.Reset(100);
+    }
+
     sScriptMgr->OnMapUpdate(this, t_diff);
 
     TC_METRIC_VALUE("map_creatures", uint64(GetObjectsStore().Size<Creature>()),
@@ -935,14 +942,6 @@ void Map::Update(uint32 t_diff)
     TC_METRIC_VALUE("map_gameobjects", uint64(GetObjectsStore().Size<GameObject>()),
         TC_METRIC_TAG("map_id", std::to_string(GetId())),
         TC_METRIC_TAG("map_instanceid", std::to_string(GetInstanceId())));
-
-    // @tswow-end
-    m_batchProcessingTimer.Update(t_diff);
-    if (m_batchProcessingTimer.Passed())
-    {
-        m_actionBatchObjects->ProcessBatchedObjects();
-        m_batchProcessingTimer.Reset(5000); // confirmed by blueposts
-    }
 }
 
 struct ResetNotifier
@@ -4878,5 +4877,5 @@ std::string InstanceMap::GetDebugInfo() const
 
 void Map::AddBatchAction(WorldPacket& packet, WorldSession* session)
 {
-    // ->AddBatchAction(packet)
+    m_actionBatchObjects->CreateBatchObject(packet, session);
 }

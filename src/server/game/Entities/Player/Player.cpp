@@ -2695,7 +2695,6 @@ bool Player::IsMaxLevel() const
 void Player::InitTalentForLevel()
 {
     /* @basemod-begin: remove talents */
-    ResetTalents(true); /// @todo: Has to (collectively) be renamed to ResetTalents
     SetFreeTalentPoints(0);
     /* @basemod-end */
 }

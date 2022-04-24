@@ -35,7 +35,6 @@
 #include <memory>
 #include <unordered_map>
 #include <boost/circular_buffer.hpp>
-#include "ActionBatchObject.h"
 
 class Creature;
 class GameClient;

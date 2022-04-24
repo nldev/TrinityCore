@@ -44,6 +44,7 @@
 #include "TSJson.h"
 #include "TSWorldEntity.h"
 // @tswow-end
+#include "ActionBatchObject.h"
 
 class Battleground;
 class BattlegroundMap;
