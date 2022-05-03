@@ -668,7 +668,8 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         // batching
         TimeTracker m_batchProcessingTimer;
         ActionBatchObject* m_actionBatchObjects;
-        void AddBatchAction(WorldPacket& packet, WorldSession* session);
+        void AddPacketBatchAction(WorldPacket& packet, WorldSession* session);
+        void AddSpellBatchAction(Spell* spell, Spell::TargetInfo& info);
 
     private:
         void LoadMapAndVMap(int gx, int gy);

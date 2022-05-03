@@ -607,8 +607,8 @@ class TC_GAME_API WorldSession
         void SetCalendarEventCreationCooldown(time_t cooldown) { _calendarEventCreationCooldown = cooldown; }
 
         // batching
-        void HandleBatchedAction(WorldPacket& recvPacket);
-        void AddBatchAction(WorldPacket& packet);
+        void HandlePacketBatchedAction(WorldPacket& recvPacket);
+        void AddPacketBatchAction(WorldPacket& packet);
 
     public:                                                 // opcodes handlers
 

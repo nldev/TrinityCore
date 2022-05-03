@@ -655,6 +655,7 @@ class TC_GAME_API Spell
         // Spell target subsystem
         // *****************************************
         // Targets store structures and data
+    public:
         struct TargetInfoBase
         {
             virtual void PreprocessTarget(Spell* /*spell*/) { }
@@ -663,7 +664,6 @@ class TC_GAME_API Spell
 
             uint8 EffectMask = 0;
 
-        protected:
             TargetInfoBase() { }
             virtual ~TargetInfoBase() { }
         };
@@ -727,9 +727,11 @@ class TC_GAME_API Spell
         };
         std::vector<CorpseTargetInfo> m_UniqueCorpseTargetInfo;
 
+    public:
         template <class Container>
         void DoProcessTargetContainer(Container& targetContainer);
 
+    protected:
         SpellDestination m_destTargets[MAX_SPELL_EFFECTS];
 
         void AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid = true, bool implicit = true, Position const* losPosition = nullptr);

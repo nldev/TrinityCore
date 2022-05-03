@@ -3569,7 +3569,7 @@ void Spell::DoProcessTargetContainer(Container& targetContainer)
             if (target.EffectMask & (1 << spellEffectInfo.EffectIndex))
                 target.DoTargetSpellHit(this, spellEffectInfo);
 
-    for (TargetInfoBase& target : targetContainer)
+    for (TargetInfo& target : targetContainer)
         target.DoDamageAndTriggers(this);
 }
 

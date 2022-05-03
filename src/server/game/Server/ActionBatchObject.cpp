@@ -1,13 +1,19 @@
 #include "ActionBatchObject.h"
 #include "WorldSession.h"
 #include "WorldPacket.h"
+#include "Spell.h"
 #include "Packet.h"
 
 ActionBatchObject::ActionBatchObject()
 {
 }
 
-void ActionBatchObject::CreateBatchObject(WorldPacket& data, WorldSession* session)
+void ActionBatchObject::CreateSpellBatchObject(Spell* spell, Spell::TargetInfo& info)
+{
+    m_spellBatch.push(std::make_pair(spell, info));
+}
+
+void ActionBatchObject::CreatePacketBatchObject(WorldPacket& data, WorldSession* session)
 {
     if (IsPacketBatchable(data, session))
         m_packetBatch.push(std::make_pair(data, session));
@@ -48,6 +54,14 @@ void ActionBatchObject::ProcessBatchedObjects()
             break;
         }
         m_packetBatch.pop();
+    }
+    while (!m_spellBatch.empty())
+    {
+        std::pair<Spell*, Spell::TargetInfo> p = m_spellBatch.front();
+        Spell* spell = (Spell*)p.first;
+        Spell::TargetInfo& info = (Spell::TargetInfo&)p.second;
+
+        info.DoDamageAndTriggers(spell);
     }
 }
 

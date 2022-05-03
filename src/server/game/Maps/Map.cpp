@@ -4875,7 +4875,12 @@ std::string InstanceMap::GetDebugInfo() const
     return sstr.str();
 }
 
-void Map::AddBatchAction(WorldPacket& packet, WorldSession* session)
+void Map::AddPacketBatchAction(WorldPacket& packet, WorldSession* session)
 {
-    m_actionBatchObjects->CreateBatchObject(packet, session);
+    m_actionBatchObjects->CreatePacketBatchObject(packet, session);
+}
+
+void Map::AddSpellBatchAction(Spell* spell, Spell::TargetInfo& info)
+{
+    m_actionBatchObjects->CreateSpellBatchObject(spell, info);
 }

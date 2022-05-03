@@ -1600,7 +1600,7 @@ void WorldSession::HandleUpdateMissileTrajectory(WorldPacket& recvPacket)
     }
 }
 
-void WorldSession::HandleBatchedAction(WorldPacket& recv_data)
+void WorldSession::HandlePacketBatchedAction(WorldPacket& recv_data)
 {
-  AddBatchAction(recv_data);
+    AddPacketBatchAction(recv_data);
 }

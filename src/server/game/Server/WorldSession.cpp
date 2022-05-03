@@ -1716,7 +1716,7 @@ void WorldSession::HandleCustom(WorldPacket& packet)
 }
 // @tswow-end
 
-void WorldSession::AddBatchAction(WorldPacket& packet)
+void WorldSession::AddPacketBatchAction(WorldPacket& packet)
 {
-    GetPlayer()->GetMap()->AddBatchAction(packet, this);
+    GetPlayer()->GetMap()->AddPacketBatchAction(packet, this);
 }
