@@ -669,7 +669,7 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         TimeTracker m_batchProcessingTimer;
         ActionBatchObject* m_actionBatchObjects;
         void AddPacketBatchAction(WorldPacket& packet, WorldSession* session);
-        void AddSpellBatchAction(Spell* spell, Spell::TargetInfo& info);
+        void AddSpellBatchAction(Spell* spell);
 
     private:
         void LoadMapAndVMap(int gx, int gy);

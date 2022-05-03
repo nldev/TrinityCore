@@ -628,8 +628,8 @@ Spell::~Spell()
         *m_selfContainer = nullptr;
     }
 
-    if (m_caster && m_caster->GetTypeId() == TYPEID_PLAYER)
-        ASSERT(m_caster->ToPlayer()->m_spellModTakingSpell != this);
+    // if (m_caster && m_caster->GetTypeId() == TYPEID_PLAYER)
+    //    ASSERT(m_caster->ToPlayer()->m_spellModTakingSpell != this);
 
     delete m_spellValue;
 
@@ -2730,15 +2730,15 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
 
     if (Player* player = unit->ToPlayer())
     {
-        player->StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, m_spellInfo->Id);
-        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id, 0, m_caster);
-        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET2, m_spellInfo->Id);
+        // player->StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, m_spellInfo->Id);
+        // player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id, 0, m_caster);
+        // player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET2, m_spellInfo->Id);
     }
 
     if (Player* player = m_caster->ToPlayer())
     {
-        player->StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_CASTER, m_spellInfo->Id);
-        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL2, m_spellInfo->Id, 0, unit);
+        // player->StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_CASTER, m_spellInfo->Id);
+        // player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL2, m_spellInfo->Id, 0, unit);
     }
 
     if (m_caster != unit)
@@ -3285,6 +3285,68 @@ void Spell::cast(bool skipCheck)
         modOwner->SetSpellModTakingSpell(lastSpellMod, true);
 }
 
+void Spell::_prehandle_immediate()
+{
+    Player* modOwner = m_caster->GetSpellModOwner();
+    CallScriptAfterCastHandlers();
+
+    if (std::vector<int32> const* spell_triggered = sSpellMgr->GetSpellLinked(m_spellInfo->Id))
+    {
+        for (int32 id : *spell_triggered)
+        {
+            if (id < 0)
+            {
+                if (Unit* unitCaster = m_caster->ToUnit())
+                    unitCaster->RemoveAurasDueToSpell(-id);
+            }
+            else
+                m_caster->CastSpell(m_targets.GetUnitTarget() ? m_targets.GetUnitTarget() : m_caster, id, true);
+        }
+    }
+
+    if (modOwner)
+    {
+        modOwner->SetSpellModTakingSpell(this, false);
+
+        //Clear spell cooldowns after every spell is cast if .cheat cooldown is enabled.
+        if (m_originalCaster && modOwner->GetCommandStatus(CHEAT_COOLDOWN))
+            m_originalCaster->GetSpellHistory()->ResetCooldown(m_spellInfo->Id, true);
+    }
+
+    SetExecutedCurrently(false);
+
+    if (!m_originalCaster)
+        return;
+
+    // Handle procs on cast
+    uint32 procAttacker = m_procAttacker;
+    if (!procAttacker)
+    {
+        if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC)
+            procAttacker = IsPositive() ? PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
+        else
+            procAttacker = IsPositive() ? PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
+    }
+
+    uint32 hitMask = m_hitMask;
+    if (!(hitMask & PROC_HIT_CRITICAL))
+        hitMask |= PROC_HIT_NORMAL;
+
+    Unit::ProcSkillsAndAuras(m_originalCaster, nullptr, procAttacker, PROC_FLAG_NONE, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_CAST, hitMask, this, nullptr, nullptr);
+
+    // @tswow-begin
+    if (Creature* caster = m_originalCaster->ToCreature())
+    {
+        FIRE_MAP(caster->GetCreatureTemplate()->events, CreatureOnSpellCastFinished, TSCreature(caster), GetSpellInfo(), SPELL_FINISHED_SUCCESSFUL_CAST);
+    }
+    // @tswow-end
+
+    // Call CreatureAI hook OnSpellCast
+    if (Creature* caster = m_originalCaster->ToCreature())
+        if (caster->IsAIEnabled())
+            caster->AI()->OnSpellCast(GetSpellInfo());
+}
+
 void Spell::_cast(bool skipCheck)
 {
     // update pointers base at GUIDs to prevent access to non-existed already object
@@ -3492,70 +3554,21 @@ void Spell::_cast(bool skipCheck)
         if (Unit* unitCaster = m_caster->ToUnit())
             if (unitCaster->HasUnitState(UNIT_STATE_CASTING) && !unitCaster->IsNonMeleeSpellCast(false, false, true))
                 unitCaster->ClearUnitState(UNIT_STATE_CASTING);
+
+        _prehandle_immediate();
     }
     else
     {
         // Immediate spell, no big deal
-        handle_immediate();
-    }
-
-    CallScriptAfterCastHandlers();
-
-    if (std::vector<int32> const* spell_triggered = sSpellMgr->GetSpellLinked(m_spellInfo->Id))
-    {
-        for (int32 id : *spell_triggered)
+        if (m_caster && m_caster->GetMap())
         {
-            if (id < 0)
-            {
-                if (Unit* unitCaster = m_caster->ToUnit())
-                    unitCaster->RemoveAurasDueToSpell(-id);
-            }
-            else
-                m_caster->CastSpell(m_targets.GetUnitTarget() ? m_targets.GetUnitTarget() : m_caster, id, true);
+            m_caster->GetMap()->AddSpellBatchAction(this);
         }
+        else {
+            handle_immediate();
+        }
+
     }
-
-    if (modOwner)
-    {
-        modOwner->SetSpellModTakingSpell(this, false);
-
-        //Clear spell cooldowns after every spell is cast if .cheat cooldown is enabled.
-        if (m_originalCaster && modOwner->GetCommandStatus(CHEAT_COOLDOWN))
-            m_originalCaster->GetSpellHistory()->ResetCooldown(m_spellInfo->Id, true);
-    }
-
-    SetExecutedCurrently(false);
-
-    if (!m_originalCaster)
-        return;
-
-    // Handle procs on cast
-    uint32 procAttacker = m_procAttacker;
-    if (!procAttacker)
-    {
-        if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC)
-            procAttacker = IsPositive() ? PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
-        else
-            procAttacker = IsPositive() ? PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS : PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
-    }
-
-    uint32 hitMask = m_hitMask;
-    if (!(hitMask & PROC_HIT_CRITICAL))
-        hitMask |= PROC_HIT_NORMAL;
-
-    Unit::ProcSkillsAndAuras(m_originalCaster, nullptr, procAttacker, PROC_FLAG_NONE, PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_CAST, hitMask, this, nullptr, nullptr);
-
-    // @tswow-begin
-    if(Creature* caster = m_originalCaster->ToCreature())
-    {
-        FIRE_MAP(caster->GetCreatureTemplate()->events,CreatureOnSpellCastFinished,TSCreature(caster),GetSpellInfo(),SPELL_FINISHED_SUCCESSFUL_CAST);
-    }
-    // @tswow-end
-
-    // Call CreatureAI hook OnSpellCast
-    if (Creature* caster = m_originalCaster->ToCreature())
-        if (caster->IsAIEnabled())
-            caster->AI()->OnSpellCast(GetSpellInfo());
 }
 
 template <class Container>
@@ -3569,12 +3582,13 @@ void Spell::DoProcessTargetContainer(Container& targetContainer)
             if (target.EffectMask & (1 << spellEffectInfo.EffectIndex))
                 target.DoTargetSpellHit(this, spellEffectInfo);
 
-    for (TargetInfo& target : targetContainer)
+    for (TargetInfoBase& target : targetContainer)
         target.DoDamageAndTriggers(this);
 }
 
 void Spell::handle_immediate()
 {
+    _prehandle_immediate();
     // start channeling if applicable
     if (m_spellInfo->IsChanneled())
     {

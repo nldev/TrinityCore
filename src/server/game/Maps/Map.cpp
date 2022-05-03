@@ -930,7 +930,7 @@ void Map::Update(uint32 t_diff)
     if (m_batchProcessingTimer.Passed())
     {
         m_actionBatchObjects->ProcessBatchedObjects();
-        m_batchProcessingTimer.Reset(100);
+        m_batchProcessingTimer.Reset(5000);
     }
 
     sScriptMgr->OnMapUpdate(this, t_diff);
@@ -4880,7 +4880,7 @@ void Map::AddPacketBatchAction(WorldPacket& packet, WorldSession* session)
     m_actionBatchObjects->CreatePacketBatchObject(packet, session);
 }
 
-void Map::AddSpellBatchAction(Spell* spell, Spell::TargetInfo& info)
+void Map::AddSpellBatchAction(Spell* spell)
 {
-    m_actionBatchObjects->CreateSpellBatchObject(spell, info);
+    m_actionBatchObjects->CreateSpellBatchObject(spell);
 }

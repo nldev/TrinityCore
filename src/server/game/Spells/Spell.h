@@ -442,6 +442,7 @@ class TC_GAME_API Spell
         void handle_immediate();
         uint64 handle_delayed(uint64 t_offset);
         // handler helpers
+        void _prehandle_immediate();
         void _handle_immediate_phase();
         void _handle_finish_phase();
 

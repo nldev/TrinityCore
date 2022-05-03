@@ -11,7 +11,7 @@ class TC_GAME_API ActionBatchObject
 public:
     ActionBatchObject();
 
-    void CreateSpellBatchObject(Spell*, Spell::TargetInfo& info);
+    void CreateSpellBatchObject(Spell*);
     void CreatePacketBatchObject(WorldPacket& data, WorldSession* session);
     void ProcessBatchedObjects();
 
@@ -19,6 +19,6 @@ public:
 
 private:
     std::queue<std::pair<WorldPacket, WorldSession*>> m_packetBatch;
-    std::queue<std::pair<Spell*, Spell::TargetInfo&>> m_spellBatch;
+    std::queue<Spell*> m_spellBatch;
 };
 #endif // ActionBatchObject_h__

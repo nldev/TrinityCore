@@ -8,9 +8,9 @@ ActionBatchObject::ActionBatchObject()
 {
 }
 
-void ActionBatchObject::CreateSpellBatchObject(Spell* spell, Spell::TargetInfo& info)
+void ActionBatchObject::CreateSpellBatchObject(Spell* spell)
 {
-    m_spellBatch.push(std::make_pair(spell, info));
+    m_spellBatch.push(spell);
 }
 
 void ActionBatchObject::CreatePacketBatchObject(WorldPacket& data, WorldSession* session)
@@ -57,11 +57,10 @@ void ActionBatchObject::ProcessBatchedObjects()
     }
     while (!m_spellBatch.empty())
     {
-        std::pair<Spell*, Spell::TargetInfo> p = m_spellBatch.front();
-        Spell* spell = (Spell*)p.first;
-        Spell::TargetInfo& info = (Spell::TargetInfo&)p.second;
-
-        info.DoDamageAndTriggers(spell);
+        Spell* spell = m_spellBatch.front();
+        if (spell != nullptr)
+            spell->handle_immediate();
+        m_spellBatch.pop();
     }
 }
 
