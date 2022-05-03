@@ -446,6 +446,8 @@ class TC_GAME_API Spell
         void _handle_immediate_phase();
         void _handle_finish_phase();
 
+        uint16 m_is_casted = 0;
+
         SpellCastResult CheckItems(uint32* param1, uint32* param2) const;
         SpellCastResult CheckRange(bool strict) const;
         SpellCastResult CheckPower() const;

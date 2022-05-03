@@ -3349,6 +3349,10 @@ void Spell::_prehandle_immediate()
 
 void Spell::_cast(bool skipCheck)
 {
+    if (m_is_casted > 0)
+        return;
+
+    m_is_casted++;
     // update pointers base at GUIDs to prevent access to non-existed already object
     if (!UpdatePointers())
     {
