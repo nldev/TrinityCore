@@ -2236,6 +2236,8 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     float dodge_chance_f = GetUnitDodgeChance(attType, victim);
     float block_chance_f = GetUnitBlockChance(attType, victim);
     float parry_chance_f = GetUnitParryChance(attType, victim);
+    float glancing_chance_f = 0;
+    float crushing_chance_f = 0;
 
     FIRE(Unit,OnCalcMeleeOutcome
         , TSUnit(const_cast<Unit*>(this))
@@ -2245,6 +2247,8 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         , TSMutable<float>(&dodge_chance_f)
         , TSMutable<float>(&block_chance_f)
         , TSMutable<float>(&parry_chance_f)
+        , TSMutable<float>(&glancing_chance_f)
+        , TSMutable<float>(&crushing_chance_f)
         , attType
         );
 
@@ -2253,6 +2257,8 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     int32 dodge_chance = int32(dodge_chance_f*100.0f);
     int32 block_chance = int32(block_chance_f*100.0f);
     int32 parry_chance = int32(parry_chance_f*100.0f);
+    int32 glancing_chance = int32(glancing_chance_f*100.0f);
+    int32 crushing_chance = int32(crushing_chance_f*100.0f);
     // @tswow-end
 
     // melee attack table implementation
@@ -2321,6 +2327,15 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         if (tmp > 0 && roll < (sum += tmp))
             return MELEE_HIT_GLANCING;
     }
+    // @tswow-begin
+    if (glancing_chance)
+    {
+        tmp = glancing_chance;
+        if (tmp > 0
+            && roll < (sum += tmp))
+        return MELEE_HIT_GLANCING;
+    }
+    // @tswow-end
 
     // 5. BLOCK
     if (canParryOrBlock)
@@ -2357,6 +2372,15 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         if (tmp > 0 && roll < (sum += tmp))
             return MELEE_HIT_CRUSHING;
     }
+    // @tswow-begin
+    if (crushing_chance)
+    {
+        tmp = crushing_chance;
+        if (tmp > 0
+            && roll < (sum += tmp))
+            return MELEE_HIT_CRUSHING;
+    }
+    // @tswow-end
 
     // 8. HIT
     return MELEE_HIT_NORMAL;
