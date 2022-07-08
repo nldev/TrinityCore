@@ -439,7 +439,6 @@ Unit::~Unit()
 void Unit::Update(uint32 p_time)
 {
     // @tswow-begin
-    TC_ZONE_SCOPED(ENTITY_PROFILE)
     m_tsWorldEntity.tick(TSWorldObject(this));
     m_tsCollisions.Tick(TSWorldObject(this));
     // @tswow-end
@@ -9745,7 +9744,7 @@ void Unit::RemoveFromWorld()
     {
         m_duringRemoveFromWorld = true;
         if (UnitAI* ai = GetAI())
-            ai->LeavingWorld();
+            ai->OnDespawn();
 
         if (IsVehicle())
             RemoveVehicleKit();
