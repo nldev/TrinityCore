@@ -2309,6 +2309,14 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     }
 
     // 4. GLANCING
+    // @tswow-begin
+    if (glancing_chance)
+    {
+        tmp = glancing_chance;
+        if (tmp > 0 && roll < (sum += tmp))
+            return MELEE_HIT_GLANCING;
+    }
+    // @tswow-end
     // Max 40% chance to score a glancing blow against mobs of the same or higher level (only players and pets, not for ranged weapons).
     if ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
         victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet() &&
@@ -2326,15 +2334,6 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         if (tmp > 0 && roll < (sum += tmp))
             return MELEE_HIT_GLANCING;
     }
-    // @tswow-begin
-    if (glancing_chance)
-    {
-        tmp = glancing_chance;
-        if (tmp > 0
-            && roll < (sum += tmp))
-        return MELEE_HIT_GLANCING;
-    }
-    // @tswow-end
 
     // 5. BLOCK
     if (canParryOrBlock)
@@ -2351,6 +2350,14 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         return MELEE_HIT_CRIT;
 
     // 7. CRUSHING
+    // @tswow-begin
+    if (crushing_chance)
+    {
+        tmp = crushing_chance;
+        if (tmp > 0 && roll < (sum += tmp))
+            return MELEE_HIT_CRUSHING;
+    }
+    // @tswow-end
     // mobs can score crushing blows if they're 4 or more levels above victim
     if (GetLevelForTarget(victim) >= victim->GetLevelForTarget(this) + 4 &&
         // can be from by creature (if can) or from controlled player that considered as creature
@@ -2371,15 +2378,6 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         if (tmp > 0 && roll < (sum += tmp))
             return MELEE_HIT_CRUSHING;
     }
-    // @tswow-begin
-    if (crushing_chance)
-    {
-        tmp = crushing_chance;
-        if (tmp > 0
-            && roll < (sum += tmp))
-            return MELEE_HIT_CRUSHING;
-    }
-    // @tswow-end
 
     // 8. HIT
     return MELEE_HIT_NORMAL;
