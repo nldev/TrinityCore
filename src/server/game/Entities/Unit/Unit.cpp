@@ -8948,10 +8948,11 @@ DiminishingLevels Unit::GetDiminishing(SpellInfo const* auraSpellInfo, bool trig
     if (!diminish.hitCount || (!diminish.stack && GetMSTimeDiffToNow(diminish.hitTime) > 15000))
         level = DIMINISHING_LEVEL_1;
 
-    FIRE(Unit, OnGetDiminishing
+    FIRE(Unit, OnDetermineDiminishingLevel
         , TSUnit(const_cast<Unit*>(this))
         , TSSpellInfo(auraSpellInfo)
         , TSMutable<uint8>(&level)
+        , group
         , diminish.hitCount
         , diminish.hitTime
         , triggered
