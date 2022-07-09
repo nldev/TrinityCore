@@ -2799,7 +2799,9 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         DiminishingLevels diminishLevel = DIMINISHING_LEVEL_1;
         if (hitInfo.DRGroup)
         {
-            diminishLevel = unit->GetDiminishing(hitInfo.DRGroup);
+            /* @tswow-begin */
+            diminishLevel = unit->GetDiminishing(m_spellInfo, triggered);
+            /* @tswow-end */
             DiminishingReturnsType type = m_spellInfo->GetDiminishingReturnsGroupType(triggered);
             // Increase Diminishing on unit, current informations for actually casts will use values above
             if (type == DRTYPE_ALL || (type == DRTYPE_PLAYER && unit->IsAffectedByDiminishingReturns()))

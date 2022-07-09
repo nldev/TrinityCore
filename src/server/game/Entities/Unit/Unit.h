@@ -819,7 +819,9 @@ class TC_GAME_API Unit : public WorldObject
         void ReplaceAllDynamicFlags(uint32 flag) override { SetUInt32Value(UNIT_DYNAMIC_FLAGS, flag); }
 
         virtual bool IsAffectedByDiminishingReturns() const { return (GetCharmerOrOwnerPlayerOrPlayerItself() != nullptr); }
-        DiminishingLevels GetDiminishing(DiminishingGroup group) const;
+        /* @tswow-begin */
+        DiminishingLevels GetDiminishing(SpellInfo const* auraSpellInfo, bool triggered) const;
+        /* @tswow-end */
         void IncrDiminishing(SpellInfo const* auraSpellInfo, bool triggered);
         bool ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool triggered, int32& duration, WorldObject* caster, DiminishingLevels previousLevel) const;
         void ApplyDiminishingAura(DiminishingGroup group, bool apply);

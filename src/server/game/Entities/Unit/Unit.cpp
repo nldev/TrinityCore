@@ -4767,7 +4767,9 @@ bool Unit::HasAuraWithMechanic(uint32 mechanicMask) const
 bool Unit::HasStrongerAuraWithDR(SpellInfo const* auraSpellInfo, Unit* caster, bool triggered) const
 {
     DiminishingGroup diminishGroup = auraSpellInfo->GetDiminishingReturnsGroupForSpell(triggered);
-    DiminishingLevels level = GetDiminishing(diminishGroup);
+    /* @tswow-begin */
+    DiminishingLevels level = GetDiminishing(auraSpellInfo, triggered);
+    /* @tswow-end */
     for (auto itr = m_appliedAuras.begin(); itr != m_appliedAuras.end(); ++itr)
     {
         SpellInfo const* spellInfo = itr->second->GetBase()->GetSpellInfo();
@@ -8936,23 +8938,35 @@ void Unit::UpdatePetCombatState()
 
 //======================================================================
 
-DiminishingLevels Unit::GetDiminishing(DiminishingGroup group) const
+/* @tswow-begin */
+DiminishingLevels Unit::GetDiminishing(SpellInfo const* auraSpellInfo, bool triggered) const
 {
+    DiminishingGroup group = auraSpellInfo->GetDiminishingReturnsGroupForSpell(triggered);
     DiminishingReturn const& diminish = m_Diminishing[group];
-    if (!diminish.hitCount)
-        return DIMINISHING_LEVEL_1;
+    uint8 level = diminish.hitCount;
 
-    // If last spell was cast more than 15 seconds ago - reset level
-    if (!diminish.stack && GetMSTimeDiffToNow(diminish.hitTime) > 15000)
-        return DIMINISHING_LEVEL_1;
+    if (!diminish.hitCount || (!diminish.stack && GetMSTimeDiffToNow(diminish.hitTime) > 15000))
+        level = DIMINISHING_LEVEL_1;
 
-    return DiminishingLevels(diminish.hitCount);
+    FIRE(Unit, OnGetDiminishing
+        , TSUnit(const_cast<Unit*>(this))
+        , TSSpellInfo(auraSpellInfo)
+        , TSMutable<uint8>(&level)
+        , diminish.hitCount
+        , diminish.hitTime
+        , triggered
+    );
+
+    return DiminishingLevels(level);
 }
+/* @tswow-end */
 
 void Unit::IncrDiminishing(SpellInfo const* auraSpellInfo, bool triggered)
 {
     DiminishingGroup group = auraSpellInfo->GetDiminishingReturnsGroupForSpell(triggered);
-    uint32 currentLevel = GetDiminishing(group);
+    /* @tswow-begin */
+    uint32 currentLevel = GetDiminishing(auraSpellInfo, triggered);
+    /* @tswow-end */
     uint32 const maxLevel = auraSpellInfo->GetDiminishingReturnsMaxLevel(triggered);
 
     DiminishingReturn& diminish = m_Diminishing[group];
