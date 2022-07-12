@@ -8323,6 +8323,9 @@ void Spell::TriggerGlobalCooldown()
         RoundToInterval<int32>(gcd, MIN_GCD, MAX_GCD);
     }
 
+    // @tswow-begin
+    FIRE_ID(m_spellInfo->events.id,Spell,OnDetermineGlobalCooldown,TSSpell(this),TSMutable<int32>(&gcd));
+    // @tswow-end
     if (gcd)
         m_caster->ToUnit()->GetSpellHistory()->AddGlobalCooldown(m_spellInfo, gcd);
 }
