@@ -1839,15 +1839,9 @@ SpellCastResult SpellInfo::CheckVehicle(Unit const* caster) const
 
 bool SpellInfo::CheckTargetCreatureType(Unit const* target) const
 {
-    // Curse of Doom & Exorcism: not find another way to fix spell target check :/
-    if (SpellFamilyName == SPELLFAMILY_WARLOCK && GetCategory() == 1179)
-    {
-        // not allow cast at player
-        if (target->GetTypeId() == TYPEID_PLAYER)
-            return false;
-        else
-            return true;
-    }
+    // @net-begin: pvp-curse-of-doom
+    // TODO: replace with tswow hook
+    // @net-end
 
     // if target is magnet (i.e Grounding Totem) the check is skipped
     if (target->IsMagnet())
@@ -2112,9 +2106,10 @@ void SpellInfo::_LoadSpellSpecific()
             }
             case SPELLFAMILY_WARLOCK:
             {
-                // only warlock curses have this
-                if (Dispel == DISPEL_CURSE)
+                // @net-begin: pvp-curse-of-doom
+                if (Dispel == DISPEL_CURSE && Id != 603)
                     return SPELL_SPECIFIC_CURSE;
+                // @net-end
 
                 // Warlock (Demon Armor | Demon Skin | Fel Armor)
                 if (SpellFamilyFlags[1] & 0x20000020 || SpellFamilyFlags[2] & 0x00000010)
