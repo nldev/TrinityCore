@@ -23444,7 +23444,9 @@ void Player::LearnDefaultSkill(uint32 skillId, uint16 rank)
     switch (GetSkillRangeType(rcInfo))
     {
         case SKILL_RANGE_LANGUAGE:
-            SetSkill(skillId, 0, 300, 300);
+            // @net-begin: no-language-levels
+            SetSkill(skillId, 0, 1, 1);
+            // @net-end
             break;
         case SKILL_RANGE_LEVEL:
         {
