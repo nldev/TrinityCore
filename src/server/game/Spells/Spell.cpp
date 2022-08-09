@@ -2163,19 +2163,13 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     // If target reflect spell back to caster
     if (targetInfo.MissCondition == SPELL_MISS_REFLECT)
     {
-        // @net-begin: allow-gobject-reflect
-        targetInfo.ReflectResult = SPELL_MISS_REFLECT;
+        /* @net-begin: allow-gobject-reflect */
+        Unit* unitCaster = m_caster->IsUnit() ? m_caster->ToUnit() : m_caster->GetOwner();
+        targetInfo.ReflectResult = unitCaster->SpellHitResult(unitCaster, m_spellInfo, true); // can't reflect twice
+        /* @net-end */
 
         // Proc spell reflect aura when missile hits the original target
-        auto ownerGuid = m_caster->GetOwnerGUID();
-        if (m_caster->IsGameObject() && ownerGuid)
-        {
-            target->m_Events.AddEvent(new ProcReflectDelayed(target, ownerGuid), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
-        } else
-        {
-            target->m_Events.AddEvent(new ProcReflectDelayed(target, m_originalCasterGUID), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
-        }
-        // @net-end
+        target->m_Events.AddEvent(new ProcReflectDelayed(target, m_originalCasterGUID), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
 
         // Increase time interval for reflected spells by 1.5
         targetInfo.TimeDelay += targetInfo.TimeDelay >> 1;
