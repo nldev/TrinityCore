@@ -850,21 +850,23 @@ class spell_sha_heroism : public SpellScript
 {
     PrepareSpellScript(spell_sha_heroism);
 
+    // @net-begin: cross-faction-bloodlust
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_SHAMAN_EXHAUSTION });
+        return ValidateSpellInfo({ SPELL_SHAMAN_SATED });
     }
 
     void RemoveInvalidTargets(std::list<WorldObject*>& targets)
     {
-        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_EXHAUSTION));
+        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_SATED));
     }
 
     void ApplyDebuff()
     {
         if (Unit* target = GetHitUnit())
-            target->CastSpell(target, SPELL_SHAMAN_EXHAUSTION, true);
+            target->CastSpell(target, SPELL_SHAMAN_SATED, true);
     }
+    // @net-end
 
     void Register() override
     {
