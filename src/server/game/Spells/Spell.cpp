@@ -596,11 +596,12 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
 
     m_channelTargetEffectMask = 0;
 
+    // @net-begin: allow-gobject-reflect
     // Determine if spell can be reflected back to the caster
-    // Patch 1.2 notes: Spell Reflection no longer reflects abilities
-    m_canReflect = caster->isType(TYPEMASK_UNIT) && m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && !m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY)
+    m_canReflect = (caster->isType(TYPEMASK_GAMEOBJECT) || caster->isType(TYPEMASK_UNIT)) && m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC
         && !m_spellInfo->HasAttribute(SPELL_ATTR1_CANT_BE_REFLECTED) && !m_spellInfo->HasAttribute(SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY)
         && !m_spellInfo->IsPassive();
+    // @net-end
 
     CleanupTargetList();
     memset(m_effectExecuteData, 0, MAX_SPELL_EFFECTS * sizeof(ByteBuffer*));
@@ -2139,7 +2140,7 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     if (!effectMask)
         return;
     // @tswow-end
-    
+
     // Spell have speed - need calculate incoming time
     // Incoming time is zero for self casts. At least I think so.
     if (m_spellInfo->Speed > 0.0f && m_caster != target)
@@ -2162,16 +2163,19 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     // If target reflect spell back to caster
     if (targetInfo.MissCondition == SPELL_MISS_REFLECT)
     {
-        // @net-begin
-        // Calculate reflected spell result on caster
-        if (m_caster->IsUnit() || m_caster->IsGameObject())
-        {
-            targetInfo.ReflectResult = SPELL_MISS_REFLECT;
-        }
-        // @net-end
+        // @net-begin: allow-gobject-reflect
+        targetInfo.ReflectResult = SPELL_MISS_REFLECT;
 
         // Proc spell reflect aura when missile hits the original target
-        target->m_Events.AddEvent(new ProcReflectDelayed(target, m_originalCasterGUID), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
+        auto ownerGuid = m_caster->GetOwnerGUID();
+        if (m_caster->IsGameObject() && ownerGuid)
+        {
+            target->m_Events.AddEvent(new ProcReflectDelayed(target, ownerGuid), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
+        } else
+        {
+            target->m_Events.AddEvent(new ProcReflectDelayed(target, m_originalCasterGUID), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
+        }
+        // @net-end
 
         // Increase time interval for reflected spells by 1.5
         targetInfo.TimeDelay += targetInfo.TimeDelay >> 1;
