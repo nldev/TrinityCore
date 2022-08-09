@@ -1868,7 +1868,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool CanTitanGrip() const { return m_canTitanGrip; }
         void SetCanTitanGrip(bool value, uint32 penaltySpellId = 0);
         void CheckTitanGripPenalty();
-        bool CanTameExoticPets() const { return IsGameMaster() || HasAuraType(SPELL_AURA_ALLOW_TAME_PET_TYPE); }
+        // @net-begin: simple-pets
+        bool CanTameExoticPets() const { return true; }
+        // @net-end
 
         void SetRegularAttackTime();
 

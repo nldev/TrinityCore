@@ -269,7 +269,9 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
             ReplaceAllPetFlags(petInfo->WasRenamed ? UNIT_PET_FLAG_CAN_BE_ABANDONED : (UNIT_PET_FLAG_CAN_BE_RENAMED | UNIT_PET_FLAG_CAN_BE_ABANDONED));
             ReplaceAllUnitFlags(UNIT_FLAG_PLAYER_CONTROLLED); // this enables popup window (pet abandon, cancel)
             SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
-            SetPower(POWER_HAPPINESS, petInfo->Happiness);
+            // @net-begin: simple-pets
+            SetPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
+            // @net-end
             break;
         default:
             if (!IsPetGhoul())
@@ -592,8 +594,10 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
             RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
 
             // lose happiness when died and not in BG/Arena
+            // @net-begin: simple-pets
             if (!GetMap()->IsBattlegroundOrArena())
-                ModifyPower(POWER_HAPPINESS, -HAPPINESS_LEVEL_SIZE);
+                ModifyPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
+            // @net-end
 
             //SetUnitFlag(UNIT_FLAG_STUNNED);
         }
@@ -709,26 +713,17 @@ void Pet::Update(uint32 diff)
     Creature::Update(diff);
 }
 
+// @net-begin: simple-pets
 void Pet::LoseHappiness()
 {
-    uint32 curValue = GetPower(POWER_HAPPINESS);
-    if (curValue <= 0)
-        return;
-    int32 addvalue = 670;                                   //value is 70/35/17/8/4 (per min) * 1000 / 8 (timer 7.5 secs)
-    if (IsInCombat())                                        //we know in combat happiness fades faster, multiplier guess
-        addvalue = int32(addvalue * 1.5f);
-    ModifyPower(POWER_HAPPINESS, -addvalue);
+    ModifyPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
 }
 
 HappinessState Pet::GetHappinessState()
 {
-    if (GetPower(POWER_HAPPINESS) < HAPPINESS_LEVEL_SIZE)
-        return UNHAPPY;
-    else if (GetPower(POWER_HAPPINESS) >= HAPPINESS_LEVEL_SIZE * 2)
-        return HAPPY;
-    else
-        return CONTENT;
+    return HAPPY;
 }
+// @net-end
 
 void Pet::Remove(PetSaveMode mode, bool returnreagent)
 {
@@ -843,7 +838,9 @@ bool Pet::CreateBaseAtTamed(CreatureTemplate const* cinfo, Map* map, uint32 phas
         return false;
 
     SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
-    SetPower(POWER_HAPPINESS, 166500);
+    // @net-begin: simple-pets
+    SetPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
+    // @net-end
     SetPetNameTimestamp(0);
     SetPetExperience(0);
     SetPetNextLevelExperience(uint32(sObjectMgr->GetXPForLevel(GetLevel()+1)*PET_XP_FACTOR));
@@ -1790,7 +1787,9 @@ void Pet::InitTalentForLevel()
     if (talentPointsForLevel == 0 || m_usedTalentCount > talentPointsForLevel)
         resetTalents(); // Remove all talent points
 
-    SetFreeTalentPoints(talentPointsForLevel - m_usedTalentCount);
+    // @net-begin: simple-pets
+    SetFreeTalentPoints(0);
+    // @net-end
 
     if (!m_loading)
         GetOwner()->SendTalentsInfoData(true);
@@ -1977,22 +1976,9 @@ void Pet::SynchronizeLevelWithOwner()
 {
     Player* owner = GetOwner();
 
-    switch (getPetType())
-    {
-        // always same level
-        case SUMMON_PET:
-            GivePetLevel(owner->GetLevel());
-            break;
-        // can't be greater owner level
-        case HUNTER_PET:
-            if (GetLevel() > owner->GetLevel())
-                GivePetLevel(owner->GetLevel());
-            else if (GetLevel() + 5 < owner->GetLevel())
-                GivePetLevel(owner->GetLevel() - 5);
-            break;
-        default:
-            break;
-    }
+    // @net-begin: simple-pets
+    GivePetLevel(owner->GetLevel());
+    // @net-end
 }
 
 Player* Pet::GetOwner() const
@@ -2003,18 +1989,24 @@ Player* Pet::GetOwner() const
 float Pet::GetNativeObjectScale() const
 {
     CreatureFamilyEntry const* creatureFamily = sCreatureFamilyStore.LookupEntry(GetCreatureTemplate()->family);
-    if (creatureFamily && creatureFamily->MinScale > 0.0f && getPetType() == HUNTER_PET)
+    // @net-begin: simple-pets
+    // TODO: replace with hook
+    if (creatureFamily && getPetType() == HUNTER_PET)
     {
         float scale;
-        if (GetLevel() >= creatureFamily->MaxScaleLevel)
-            scale = creatureFamily->MaxScale;
-        else if (GetLevel() <= creatureFamily->MinScaleLevel)
-            scale = creatureFamily->MinScale;
-        else
-            scale = creatureFamily->MinScale + float(GetLevel() - creatureFamily->MinScaleLevel) / creatureFamily->MaxScaleLevel * (creatureFamily->MaxScale - creatureFamily->MinScale);
-
+        // if (GetLevel() >= creatureFamily->MaxScaleLevel)
+        //     scale = creatureFamily->MaxScale;
+        // else if (GetLevel() <= creatureFamily->MinScaleLevel)
+        //     scale = creatureFamily->MinScale;
+        // else
+        //     scale = creatureFamily->MinScale + float(GetLevel() - creatureFamily->MinScaleLevel) / creatureFamily->MaxScaleLevel * (creatureFamily->MaxScale - creatureFamily->MinScale);
+        //
+        // return scale;
+        scale = creatureFamily->MaxScale;
         return scale;
+
     }
+    // @net-end
 
     return Guardian::GetNativeObjectScale();
 }

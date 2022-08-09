@@ -26092,7 +26092,9 @@ void Player::BuildPetTalentsInfoData(WorldPacket* data)
     if (!pet)
         return;
 
-    unspentTalentPoints = pet->GetFreeTalentPoints();
+    // @net-begin: simple-pets
+    unspentTalentPoints = 0;
+    // @net-end
 
     data->put<uint32>(pointsPos, unspentTalentPoints);      // put real points
 

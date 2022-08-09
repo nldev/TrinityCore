@@ -527,15 +527,10 @@ void WorldSession::HandleUnstablePet(WorldPacket& recvData)
     }
 
     CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate((*stabledPet)->CreatureId);
-    if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
-    {
-        // if problem in exotic pet
-        if (creatureInfo && creatureInfo->IsTameable(true))
-            SendPetStableResult(STABLE_ERR_EXOTIC);
-        else
-            SendPetStableResult(STABLE_ERR_STABLE);
-        return;
-    }
+    // @net-begin: simple-pets
+    if (!creatureInfo)
+        SendPetStableResult(STABLE_ERR_STABLE);
+    // @net-end
 
     Pet* oldPet = _player->GetPet();
     if (oldPet)
@@ -680,15 +675,10 @@ void WorldSession::HandleStableSwapPet(WorldPacket& recvData)
     }
 
     CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate((*stabledPet)->CreatureId);
-    if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
-    {
-        // if problem in exotic pet
-        if (creatureInfo && creatureInfo->IsTameable(true))
-            SendPetStableResult(STABLE_ERR_EXOTIC);
-        else
-            SendPetStableResult(STABLE_ERR_STABLE);
-        return;
-    }
+    // @net-begin: simple-pets
+    if (!creatureInfo)
+        SendPetStableResult(STABLE_ERR_STABLE);
+    // @net-end
 
     Pet* oldPet = _player->GetPet();
     if (oldPet)
