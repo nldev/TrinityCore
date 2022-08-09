@@ -25437,7 +25437,7 @@ void Player::_LoadSkills(PreparedQueryResult result)
             switch (GetSkillRangeType(rcEntry))
             {
                 case SKILL_RANGE_LANGUAGE:                      // 300..300
-                    value = max = 300;
+                    value = max = 1;
                     break;
                 case SKILL_RANGE_MONO:                          // 1..1, grey monolite bar
                     value = max = 1;
