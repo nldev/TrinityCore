@@ -23444,7 +23444,9 @@ void Player::LearnDefaultSkill(uint32 skillId, uint16 rank)
     switch (GetSkillRangeType(rcInfo))
     {
         case SKILL_RANGE_LANGUAGE:
-            SetSkill(skillId, 0, 300, 300);
+            // @net-begin: no-language-levels
+            SetSkill(skillId, 0, 1, 1);
+            // @net-end
             break;
         case SKILL_RANGE_LEVEL:
         {
@@ -25435,7 +25437,7 @@ void Player::_LoadSkills(PreparedQueryResult result)
             switch (GetSkillRangeType(rcEntry))
             {
                 case SKILL_RANGE_LANGUAGE:                      // 300..300
-                    value = max = 300;
+                    value = max = 1;
                     break;
                 case SKILL_RANGE_MONO:                          // 1..1, grey monolite bar
                     value = max = 1;
