@@ -104,6 +104,10 @@ Map::~Map()
         sMapMgr->DecreaseScheduledScriptCount(m_scriptSchedule.size());
 
     MMAP::MMapFactory::createOrGetMMapManager()->unloadMapInstance(GetId(), i_InstanceId);
+
+    // @net-begin: action-batching
+    delete m_actionBatchObjects;
+    // @net-end
 }
 
 bool Map::ExistMap(uint32 mapid, int gx, int gy)
@@ -285,6 +289,9 @@ m_activeNonPlayersIter(m_activeNonPlayers.end()), _transportsUpdateIter(_transpo
 i_gridExpiry(expiry),
 i_scriptLock(false), _respawnCheckTimer(0)
 {
+    // @net-begin: action-batching
+    m_actionBatchObjects = new ActionBatchObject();
+    // @net-end
     m_parentMap = (_parent ? _parent : this);
     for (unsigned int idx=0; idx < MAX_NUMBER_OF_GRIDS; ++idx)
     {
@@ -951,6 +958,15 @@ void Map::Update(uint32 t_diff)
         ProcessRelocationNotifies(t_diff);
     }
 
+    // @net-begin: action-batching
+    m_batchProcessingTimer.Update(t_diff);
+    if (m_batchProcessingTimer.Passed())
+    {
+        m_actionBatchObjects->ProcessBatchedObjects();
+        m_batchProcessingTimer.Reset(5000);
+    }
+    // sScriptMgr->OnMapUpdate(this, t_diff);
+    // @net-end
     {
         ZoneScopedNC("ScriptMgr::OnMapUpdate", MAP_UPDATE_COLOR)
         sScriptMgr->OnMapUpdate(this, t_diff);
@@ -4920,6 +4936,18 @@ std::string Map::GetDebugInfo() const
         << " HasPlayers: " << HavePlayers();
     return sstr.str();
 }
+
+// @net-begin: action-batching
+void Map::AddPacketBatchAction(WorldPacket& packet, WorldSession* session)
+{
+    m_actionBatchObjects->CreatePacketBatchObject(packet, session);
+}
+
+void Map::AddSpellBatchAction(Spell* spell)
+{
+    m_actionBatchObjects->CreateSpellBatchObject(spell);
+}
+// @net-end
 
 std::string InstanceMap::GetDebugInfo() const
 {

@@ -45,6 +45,9 @@
 #include "TSWorldEntity.h"
 #include <sol/sol.hpp>
 // @tswow-end
+// @net-begin
+#include "ActionBatchObject.h"
+// @net-end
 
 class Battleground;
 class BattlegroundMap;
@@ -665,6 +668,12 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         }
 
         virtual std::string GetDebugInfo() const;
+
+        // batching
+        TimeTracker m_batchProcessingTimer;
+        ActionBatchObject* m_actionBatchObjects;
+        void AddPacketBatchAction(WorldPacket& packet, WorldSession* session);
+        void AddSpellBatchAction(Spell* spell);
 
     private:
         void LoadMapAndVMap(int gx, int gy);
