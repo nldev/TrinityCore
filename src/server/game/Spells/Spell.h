@@ -342,6 +342,9 @@ class TC_GAME_API Spell
         void handle_immediate();
         uint64 handle_delayed(uint64 t_offset);
         // handler helpers
+        // @net-begin: action-batching
+        void _prehandle_immediate();
+        // @net-end
         void _handle_immediate_phase();
         void _handle_finish_phase();
 
@@ -555,6 +558,9 @@ class TC_GAME_API Spell
         // Spell target subsystem
         // *****************************************
         // Targets store structures and data
+    // @net-begin: action-batching
+    public:
+    // @net-end
         struct TargetInfoBase
         {
             virtual void PreprocessTarget(Spell* /*spell*/) { }
@@ -563,7 +569,10 @@ class TC_GAME_API Spell
 
             uint8 EffectMask = 0;
 
-        protected:
+        // @net-begin: action-batching
+        // protected:
+        // @net-end
+
             TargetInfoBase() { }
             virtual ~TargetInfoBase() { }
         };
@@ -625,11 +634,17 @@ class TC_GAME_API Spell
             ObjectGuid TargetGUID;
             uint64 TimeDelay = 0ULL;
         };
+    // @net-begin: action-batching
+    public:
+    // @net-end
         std::vector<CorpseTargetInfo> m_UniqueCorpseTargetInfo;
 
         template <class Container>
         void DoProcessTargetContainer(Container& targetContainer);
 
+    // @net-begin: action-batching
+    private:
+    // @net-end
         SpellDestination m_destTargets[MAX_SPELL_EFFECTS];
 
         void AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid = true, bool implicit = true, Position const* losPosition = nullptr);
