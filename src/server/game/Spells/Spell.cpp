@@ -3314,7 +3314,7 @@ void Spell::_prehandle_immediate()
     // @tswow-begin
     if (Creature* caster = m_originalCaster->ToCreature())
     {
-        FIRE_MAP(caster->GetCreatureTemplate()->events, CreatureOnSpellCastFinished, TSCreature(caster), GetSpellInfo(), SPELL_FINISHED_SUCCESSFUL_CAST);
+        FIRE_ID(caster->GetCreatureTemplate()->events.id,Creature,OnSpellCastFinished,TSCreature(caster),GetSpellInfo(),SPELL_FINISHED_SUCCESSFUL_CAST);
     }
     // @tswow-end
 

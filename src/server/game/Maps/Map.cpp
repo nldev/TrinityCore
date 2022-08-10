@@ -4938,11 +4938,6 @@ std::string Map::GetDebugInfo() const
 }
 
 // @net-begin: action-batching
-void Map::AddPacketBatchAction(WorldPacket& packet, WorldSession* session)
-{
-    m_actionBatchObjects->CreatePacketBatchObject(packet, session);
-}
-
 void Map::AddSpellBatchAction(Spell* spell)
 {
     m_actionBatchObjects->CreateSpellBatchObject(spell);
