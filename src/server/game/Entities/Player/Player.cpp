@@ -20532,9 +20532,8 @@ void Player::_SaveSpells(CharacterDatabaseTransaction trans)
 // real stats will be recalculated on player login
 void Player::_SaveStats(CharacterDatabaseTransaction trans) const
 {
-    // check if stat saving is enabled and if char level is high enough
-    if (!sWorld->getIntConfig(CONFIG_MIN_LEVEL_STAT_SAVE) || GetLevel() < sWorld->getIntConfig(CONFIG_MIN_LEVEL_STAT_SAVE))
-        return;
+    // @net-begin: always-save-stats
+    // @net-end
 
     CharacterDatabasePreparedStatement* stmt;
 
