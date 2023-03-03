@@ -4632,32 +4632,8 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
     // recast lost by death auras of any items held in the inventory
     CastAllObtainSpells();
 
-    if (!applySickness)
-        return;
-
-    //Characters from level 1-10 are not affected by resurrection sickness.
-    //Characters from level 11-19 will suffer from one minute of sickness
-    //for each level they are above 10.
-    //Characters level 20 and up suffer from ten minutes of sickness.
-    int32 startLevel = sWorld->getIntConfig(CONFIG_DEATH_SICKNESS_LEVEL);
-    ChrRacesEntry const* raceEntry = sChrRacesStore.AssertEntry(GetRace());
-
-    if (int32(GetLevel()) >= startLevel)
-    {
-        // set resurrection sickness
-        CastSpell(this, raceEntry->ResSicknessSpellID, true);
-
-        // not full duration
-        if (int32(GetLevel()) < startLevel+9)
-        {
-            int32 delta = (int32(GetLevel()) - startLevel + 1)*MINUTE;
-
-            if (Aura* aur = GetAura(raceEntry->ResSicknessSpellID, GetGUID()))
-            {
-                aur->SetDuration(delta*IN_MILLISECONDS);
-            }
-        }
-    }
+    // @net-begin: disable-res-sickness
+    // @net-end
 }
 
 void Player::RemoveGhoul()
