@@ -3988,10 +3988,9 @@ class spell_item_mind_control_cap : public SpellScript
         Unit* caster = GetCaster();
         if (Unit* target = GetHitUnit())
         {
-            if (roll_chance_i(ROLL_CHANCE_NO_BACKFIRE))
-                caster->CastSpell(target, roll_chance_i(ROLL_CHANCE_DULLARD) ? SPELL_DULLARD : SPELL_GNOMISH_MIND_CONTROL_CAP, GetCastItem());
-            else
-                target->CastSpell(caster, SPELL_GNOMISH_MIND_CONTROL_CAP, true); // backfire - 5% chance
+            // @net-start: mc-cap-fix
+            target->CastSpell(caster, SPELL_GNOMISH_MIND_CONTROL_CAP, true);
+            // @net-end
         }
     }
 
