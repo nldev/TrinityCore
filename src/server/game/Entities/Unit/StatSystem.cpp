@@ -872,17 +872,12 @@ void Player::UpdateBlockPercentage()
     float value = 0.0f;
     if (CanBlock())
     {
-        // Base value
+        // @net-begin: stats-rework
         value = 5.0f;
-        // Modify value from defense skill
-        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-        // Increase from SPELL_AURA_MOD_BLOCK_PERCENT aura
+        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.5f;
         value += GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
-        // Increase from rating
         value += GetRatingBonusValue(CR_BLOCK);
-
-        if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-             value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_BLOCK) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_BLOCK) : value;
+        // @net-end
 
         value = value < 0.0f ? 0.0f : value;
     }
@@ -987,13 +982,14 @@ float CalculateDiminishingReturns(float const (&capArray)[MAX_CLASSES], uint8 pl
 
 float Player::GetMissPercentageFromDefense() const
 {
-    float diminishing = 0.0f, nondiminishing = 0.0f;
-    // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-    diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
-
-    // apply diminishing formula to diminishing miss chance
-    return CalculateDiminishingReturns(miss_cap, GetClass(), nondiminishing, diminishing);
+    // @net-begin: stats-rework
+    float value = 0.0f;
+    value += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.5f;
+    value += GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f;
+    if (value < 0.0f)
+        return 0.0f;
+    return value;
+    // @net-end
 }
 
 // @tswow-begin move parry-cap to top of file
@@ -1001,28 +997,18 @@ float Player::GetMissPercentageFromDefense() const
 
 void Player::UpdateParryPercentage()
 {
-    // No parry
+    // @net-begin: stats-rework
     float value = 0.0f;
-    uint32 pclass = GetClass() - 1;
-    if (CanParry() && parry_cap[pclass] > 0.0f)
+    if (CanParry())
     {
-        float nondiminishing  = 5.0f;
-        // Parry from rating
-        float diminishing = GetRatingBonusValue(CR_PARRY);
-        // Modify value from defense skill (only bonus from defense rating diminishes)
-        nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-        diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
-        // Parry from SPELL_AURA_MOD_PARRY_PERCENT aura
-        nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
-
-        // apply diminishing formula to diminishing parry chance
-        value = CalculateDiminishingReturns(parry_cap, GetClass(), nondiminishing, diminishing);
-
-        if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-             value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) : value;
-
+        value += 5.0f;
+        value += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.5f;
+        value += GetRatingBonusValue(CR_PARRY);
+        value += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
+        value += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
         value = value < 0.0f ? 0.0f : value;
     }
+    // @net-end
     // @tswow-begin
     FIRE(
           Player,OnUpdateParryPercentage
@@ -1038,23 +1024,15 @@ void Player::UpdateParryPercentage()
 
 void Player::UpdateDodgePercentage()
 {
-    float diminishing = 0.0f, nondiminishing = 0.0f;
+    // @net-begin: stats-rework
+    float diminishing = 0.0f, nondiminishing = 5.0f;
     GetDodgeFromAgility(diminishing, nondiminishing);
-    // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-    diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
-    // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
+    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.5f;
+    nondiminishing += GetRatingBonusValue(CR_DODGE);
+    nondiminishing += GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f;
     nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
-    // Dodge from rating
-    diminishing += GetRatingBonusValue(CR_DODGE);
-
-    // apply diminishing formula to diminishing dodge chance
-    float value = CalculateDiminishingReturns(dodge_cap, GetClass(), nondiminishing, diminishing);
-
-    if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-         value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_DODGE) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_DODGE) : value;
-
-    value = value < 0.0f ? 0.0f : value;
+    float value = nondiminishing < 0.0f ? 0.0f : nondiminishing;
+    // @net-end
     // @tswow-begin
     FIRE(
           Player,OnUpdateDodgePercentage

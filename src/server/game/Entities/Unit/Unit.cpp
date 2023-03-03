@@ -1075,7 +1075,9 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
                         critPctDamageMod += victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE);
 
                     // Increase crit damage from SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
-                    critPctDamageMod += (GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, spellInfo->GetSchoolMask()) - 1.0f) * 100;
+                    // @net-begin: stats-rework
+                    critPctDamageMod += GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS);
+                    // @net-end
 
                     // Increase crit damage from SPELL_AURA_MOD_CRIT_PERCENT_VERSUS
                     critPctDamageMod += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, crTypeMask);
@@ -1322,7 +1324,9 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
                     mod += damageInfo->Target->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE);
 
                 // Increase crit damage from SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
-                mod += (GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, damageInfo->Damages[i].DamageSchoolMask) - 1.0f) * 100;
+                // @net-begin: stats-rework
+                mod += GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS);
+                // @net-end
 
                 uint32 crTypeMask = damageInfo->Target->GetCreatureTypeMask();
 
@@ -2221,15 +2225,17 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     if (victim->GetTypeId() == TYPEID_UNIT && victim->ToCreature()->IsInEvadeMode())
         return MELEE_HIT_EVADE;
 
+    // @net-begin: stats-rework
     int32 const attackerMaxSkillValueForLevel = GetMaxSkillValueForLevel(victim);
-    int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
+    int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(victim);
 
     int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
-    int32 const victimDefenseSkill = victim->GetDefenseSkillValue(this);
+    int32 const victimDefenseSkill = victim->GetDefenseSkillValue(victim);
+    int32 skillDiff = victimDefenseSkill - attackerWeaponSkill;
 
     // Miss chance based on melee
     // @tswow-begin
-    float miss_chance_f = MeleeSpellMissChance(victim, attType, attackerWeaponSkill - victimMaxSkillValueForLevel, 0);
+    float miss_chance_f = MeleeSpellMissChance(victim, attType, skillDiff, 0);
 
     // Critical hit chance
     float crit_chance_f = GetUnitCriticalChanceAgainst(attType, victim);
@@ -2239,6 +2245,23 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     float parry_chance_f = GetUnitParryChance(attType, victim);
     float glancing_chance_f = 0;
     float crushing_chance_f = 0;
+
+    float hit_chance_f = 0.0f;
+    hit_chance_f += float(GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE));
+    if (attType == RANGED_ATTACK)
+        hit_chance_f += float(victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_RANGED_HIT_CHANCE));
+    else
+        hit_chance_f += float(victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_HIT_CHANCE));
+    miss_chance_f -= hit_chance_f;
+    if (miss_chance_f < 0)
+        miss_chance_f = 0;
+    dodge_chance_f -= hit_chance_f;
+    if (dodge_chance_f < 0)
+        dodge_chance_f = 0;
+    parry_chance_f -= hit_chance_f;
+    if (parry_chance_f < 0)
+        parry_chance_f = 0;
+    // @net-end
 
     FIRE(Unit,OnCalcMeleeOutcome
         , TSUnit(const_cast<Unit*>(this))
@@ -2548,32 +2571,54 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED)
         attType = RANGED_ATTACK;
 
-    int32 attackerWeaponSkill;
-    // skill value for these spells (for example judgements) is 5 * level
-    if (spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED && !spellInfo->IsRangedWeaponSpell())
-        attackerWeaponSkill = GetMaxSkillValueForLevel();
-    else
-        attackerWeaponSkill = int32(GetWeaponSkillValue(attType, victim));
-
-    int32 skillDiff = attackerWeaponSkill - int32(victim->GetMaxSkillValueForLevel(this));
-
+    // @net-begin: stats-rework
     uint32 roll = urand(0, 9999);
+    uint32 result = SPELL_MISS_NONE;
+    bool resolved = false;
+    int32 resistChance = 0;
+    int32 deflectChance = 0;
+    int32 parryChance = 0;
+    int32 dodgeChance = 0;
+    int32 blockChance = 0;
+    int32 missChance = 0;
+    int32 hitChance = 0;
 
-    uint32 missChance = uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id) * 100.0f);
+    int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
+    int32 const victimDefenseSkill = victim->GetDefenseSkillValue(victim);
+    int32 skillDiff = victimDefenseSkill - attackerWeaponSkill;
+    missChance = uint32(MeleeSpellMissChance(victim, attType, skillDiff, spellInfo->Id)) * 100;
+    hitChance = GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE) * 100;
+    if (attType == RANGED_ATTACK)
+        hitChance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_RANGED_HIT_CHANCE) * 100;
+    else
+        hitChance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_HIT_CHANCE) * 100;
+    missChance -= hitChance;
+    if (missChance < 0)
+        missChance = 0;
+
     // Roll miss
     uint32 tmp = missChance;
     if (roll < tmp)
-        return SPELL_MISS_MISS;
+    {
+        result = SPELL_MISS_MISS;
+        resolved = true;
+    }
 
     // Chance resist mechanic
-    int32 resist_chance = victim->GetMechanicResistChance(spellInfo) * 100;
-    tmp += resist_chance;
-    if (roll < tmp)
-        return SPELL_MISS_RESIST;
+    resistChance = victim->GetMechanicResistChance(spellInfo) * 100;
+    tmp += resistChance;
+    if ((!resolved) && roll < tmp)
+    {
+        result = SPELL_MISS_RESIST;
+        resolved = true;
+    }
 
     // Same spells cannot be parried/dodged
-    if (spellInfo->HasAttribute(SPELL_ATTR0_IMPOSSIBLE_DODGE_PARRY_BLOCK))
-        return SPELL_MISS_NONE;
+    if ((!resolved) && spellInfo->HasAttribute(SPELL_ATTR0_IMPOSSIBLE_DODGE_PARRY_BLOCK))
+    {
+        result = SPELL_MISS_NONE;
+        resolved = true;
+    }
 
     bool canDodge = !spellInfo->HasAttribute(SPELL_ATTR7_CANT_DODGE);
     bool canParry = !spellInfo->HasAttribute(SPELL_ATTR7_CANT_PARRY);
@@ -2596,12 +2641,19 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
         // only if in front
         if (!victim->HasUnitState(UNIT_STATE_CONTROLLED) && (victim->HasInArc(float(M_PI), this) || victim->HasAuraType(SPELL_AURA_IGNORE_HIT_DIRECTION)))
         {
-            int32 deflect_chance = victim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS) * 100;
-            tmp += deflect_chance;
-            if (roll < tmp)
-                return SPELL_MISS_DEFLECT;
+            deflectChance = victim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS) * 100;
+            tmp += deflectChance;
+            if (!resolved && (roll < tmp))
+            {
+                result = SPELL_MISS_DEFLECT;
+                resolved = true;
+            }
         }
-        return SPELL_MISS_NONE;
+        else if (!resolved)
+        {
+            result = SPELL_MISS_NONE;
+            resolved = true;
+        }
     }
 
     // Check for attack from behind
@@ -2650,156 +2702,135 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     if (canDodge)
     {
         // Roll dodge
-        int32 dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.0f);
+        dodgeChance = int32(GetUnitDodgeChance(attType, victim) * 100.0f) - hitChance;
         if (dodgeChance < 0)
             dodgeChance = 0;
-
-        if (roll < (tmp += dodgeChance))
-            return SPELL_MISS_DODGE;
+        if (!resolved && (roll < (tmp += dodgeChance)))
+        {
+            result = SPELL_MISS_DODGE;
+            resolved = true;
+        }
     }
 
     if (canParry)
     {
         // Roll parry
-        int32 parryChance = int32(GetUnitParryChance(attType, victim) * 100.0f);
+        parryChance = int32(GetUnitParryChance(attType, victim) * 100.0f) - hitChance;
         if (parryChance < 0)
             parryChance = 0;
-
         tmp += parryChance;
-        if (roll < tmp)
-            return SPELL_MISS_PARRY;
+        if (!resolved && (roll < tmp))
+        {
+            result = SPELL_MISS_PARRY;
+            resolved = true;
+        }
     }
 
     if (canBlock)
     {
-        int32 blockChance = int32(GetUnitBlockChance(attType, victim) * 100.0f);
+        // Roll block
+        blockChance = int32(GetUnitBlockChance(attType, victim) * 100.0f);
         if (blockChance < 0)
             blockChance = 0;
         tmp += blockChance;
 
-        if (roll < tmp)
-            return SPELL_MISS_BLOCK;
+        if (!resolved && (roll < tmp))
+        {
+            result = SPELL_MISS_BLOCK;
+            resolved = true;
+        }
     }
 
-    return SPELL_MISS_NONE;
+    FIRE_ID(
+        spellInfo->events.id
+        , Spell, OnCalcMeleeResult
+        , TSSpellInfo(spellInfo)
+        , TSUnit(const_cast<Unit*>(this))
+        , TSUnit(const_cast<Unit*>(victim))
+        , TSMutable<uint32>(&result)
+        , attType
+        , resistChance
+        , deflectChance
+        , parryChance
+        , dodgeChance
+        , blockChance
+        , missChance
+        , hitChance
+        , skillDiff
+    );
+
+    return SpellMissInfo(result);
+    // @net-end
 }
 
 uint32 Unit::GetShieldBlockValue(uint32 soft_cap, uint32 hard_cap) const
 {
-    uint32 value = GetShieldBlockValue();
-    if (value >= hard_cap)
-    {
-        value = (soft_cap + hard_cap) / 2;
-    }
-    else if (value > soft_cap)
-    {
-        value = soft_cap + ((value - soft_cap) / 2);
-    }
-
-    return value;
+    // @net-begin: stats-rework
+    return GetShieldBlockValue();
+    // @net-end
 }
 
 uint32 Unit::GetDefenseSkillValue(Unit const* target) const
 {
+    // @net-begin: stats-rework
     if (GetTypeId() == TYPEID_PLAYER)
     {
-        // in PvP use full skill instead current skill value
-        uint32 value = (target && target->GetTypeId() == TYPEID_PLAYER)
-            ? ToPlayer()->GetMaxSkillValue(SKILL_DEFENSE)
-            : ToPlayer()->GetSkillValue(SKILL_DEFENSE);
+        uint32 value = ToPlayer()->GetSkillValue(SKILL_DEFENSE);
         value += uint32(ToPlayer()->GetRatingBonusValue(CR_DEFENSE_SKILL));
         return value;
     }
     else
         return GetMaxSkillValueForLevel(target);
+    // @net-end
 }
 
 float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) const
 {
-    int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
-    int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
-    int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
-
+    // @net-begin: stats-rework
+    float const attackerWeaponSkill = float((GetWeaponSkillValue(attType, victim) - GetMaxSkillValueForLevel()) * 0.5f);
     float chance = 0.0f;
-    float skillBonus = 0.0f;
-    if (victim->GetTypeId() == TYPEID_PLAYER)
-    {
-        chance = victim->GetFloatValue(PLAYER_DODGE_PERCENTAGE);
-        skillBonus = 0.04f * skillDiff;
-    }
-    else
-    {
-        if (!victim->IsTotem())
-        {
-            chance = 5.0f;
-            chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
-
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
-        }
-    }
-
-    chance += skillBonus;
-
-    // Reduce enemy dodge chance by SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
+    chance += victim->IsPlayer() ? victim->GetFloatValue(PLAYER_DODGE_PERCENTAGE) : 0.0f;
     chance += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_DODGE);
-
-    // reduce dodge by SPELL_AURA_MOD_ENEMY_DODGE
     chance += GetTotalAuraModifier(SPELL_AURA_MOD_ENEMY_DODGE);
-
-    // Reduce dodge chance by attacker expertise rating
     if (GetTypeId() == TYPEID_PLAYER)
         chance -= ToPlayer()->GetExpertiseDodgeOrParryReduction(attType);
-    else
-        chance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE) / 4.0f;
+    chance -= attackerWeaponSkill;
+    if (victim->IsTotem())
+        chance = 0.0f;
+    // @net-end
+
     return std::max(chance, 0.0f);
 }
 
 float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) const
 {
-    int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
-    int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
-    int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
-
+    // @net-begin: stats-rework
+    float const attackerWeaponSkill = float((GetWeaponSkillValue(attType, victim) - GetMaxSkillValueForLevel()) * 0.5f);
+    if (victim->IsTotem() || (victim->IsCreature() && (victim->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_PARRY)))
+        return 0.0f;
     float chance = 0.0f;
-    float skillBonus = 0.0f;
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanParry())
         {
             Item* tmpitem = playerVictim->GetWeaponForAttack(BASE_ATTACK, true);
-            if (!tmpitem)
+            if (!tmpitem || tmpitem->IsBroken())
                 tmpitem = playerVictim->GetWeaponForAttack(OFF_ATTACK, true);
-
-            if (tmpitem)
-                chance = playerVictim->GetFloatValue(PLAYER_PARRY_PERCENTAGE);
-
-            skillBonus = 0.04f * skillDiff;
+            if (tmpitem && !tmpitem->IsBroken())
+            {
+                chance += playerVictim->GetFloatValue(PLAYER_PARRY_PERCENTAGE);
+            }
         }
     }
     else
     {
-        if (!victim->IsTotem() && !(victim->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_PARRY))
-        {
-            chance = 5.0f;
-            chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
-
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 1.6f;
-        }
+        chance = 5.0f;
     }
-
-    chance += skillBonus;
-
-    // Reduce parry chance by attacker expertise rating
+    chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
+    chance -= attackerWeaponSkill;
     if (GetTypeId() == TYPEID_PLAYER)
         chance -= ToPlayer()->GetExpertiseDodgeOrParryReduction(attType);
-    else
-        chance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE) / 4.0f;
+    // @net-end
     return std::max(chance, 0.0f);
 }
 
@@ -2821,12 +2852,11 @@ float Unit::GetUnitMissChance() const
 
 float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) const
 {
-    int32 const attackerWeaponSkill = GetWeaponSkillValue(attType, victim);
-    int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(this);
-    int32 const skillDiff = victimMaxSkillValueForLevel - attackerWeaponSkill;
-
+    // @net-begin: stats-rework
+    float const attackerWeaponSkill = float((GetWeaponSkillValue(attType, victim) - GetMaxSkillValueForLevel()) * 0.5f);
+    if (victim->IsTotem() || (victim->IsCreature() && (victim->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_BLOCK)))
+        return 0.0f;
     float chance = 0.0f;
-    float skillBonus = 0.0f;
     if (Player const* playerVictim = victim->ToPlayer())
     {
         if (playerVictim->CanBlock())
@@ -2834,27 +2864,15 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             Item* tmpitem = playerVictim->GetUseableItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
             if (tmpitem && !tmpitem->IsBroken() && tmpitem->GetTemplate()->Block)
             {
-                chance = playerVictim->GetFloatValue(PLAYER_BLOCK_PERCENTAGE);
-                skillBonus = 0.04f * skillDiff;
+                chance = 0.0f;
+                chance += playerVictim->GetFloatValue(PLAYER_BLOCK_PERCENTAGE);
             }
         }
     }
-    else
-    {
-        if (!victim->IsTotem() && !(victim->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_BLOCK))
-        {
-            chance = 5.0f;
-            chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
-
-            if (skillDiff <= 10)
-                skillBonus = skillDiff * 0.1f;
-            else
-                skillBonus = 1.0f + (skillDiff - 10) * 0.1f;
-        }
-    }
-
-    chance += skillBonus;
+    chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
+    chance -= attackerWeaponSkill;
     return std::max(chance, 0.0f);
+    // @net-end
 }
 
 float Unit::GetUnitCriticalChanceDone(WeaponAttackType attackType) const
@@ -2915,15 +2933,9 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
     chance += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
 
     // Apply crit chance from defense skill
-    if (GetTypeId() == TYPEID_PLAYER)
-        skillBonus = -skillDiff * 0.04f;
-    else
-    {
-        skillBonus = -skillDiff * 0.12f;
-        if (skillDiff >= 15)
-            skillBonus -= 3.0f;
-    }
-
+    // @net-begin: stats-rework
+    skillBonus = -skillDiff * 0.1;
+    // @net-end
     chance += skillBonus;
     // @tswow-begin
     FIRE(Unit,OnCalcMeleeCrit
@@ -2961,10 +2973,9 @@ uint32 Unit::GetWeaponSkillValue(WeaponAttackType attType, Unit const* target) c
         if (item)
             skill = item->GetSkill();
 
-        // in PvP use full skill instead current skill value
-        value = (target && target->IsControlledByPlayer())
-            ? player->GetMaxSkillValue(skill)
-            : player->GetSkillValue(skill);
+        // @net-begin: stats-rework
+        value = player->GetSkillValue(skill);
+        // @net-end
         // Modify value from ratings
         value += uint32(player->GetRatingBonusValue(CR_WEAPON_SKILL));
         switch (attType)
@@ -12278,24 +12289,24 @@ void Unit::SendPlaySpellImpact(ObjectGuid guid, uint32 id) const
 
 bool Unit::CanApplyResilience() const
 {
-    return !IsVehicle() && GetOwnerGUID().IsPlayer();
+    // @net-begin: stats-rework
+    return !IsVehicle();
+    // @net-end
 }
 
 /*static*/ void Unit::ApplyResilience(Unit const* victim, float* crit, int32* damage, bool isCrit, CombatRating type)
 {
-    // player mounted on multi-passenger mount is also classified as vehicle
-    if (victim->IsVehicle() && victim->GetTypeId() != TYPEID_PLAYER)
+    // @net-start: stats-rework
+    if (victim->IsVehicle())
         return;
 
     Unit const* target = nullptr;
-    if (victim->GetTypeId() == TYPEID_PLAYER)
+    
+    if (Unit* owner = victim->GetOwner())
+        target = owner;
+    else
         target = victim;
-    else // victim->GetTypeId() == TYPEID_UNIT
-    {
-        if (Unit* owner = victim->GetOwner())
-            if (owner->GetTypeId() == TYPEID_PLAYER)
-                target = owner;
-    }
+    // @net-end
 
     if (!target)
         return;
@@ -12310,7 +12321,8 @@ bool Unit::CanApplyResilience() const
             {
                 if (isCrit)
                     *damage -= target->GetMeleeCritDamageReduction(*damage);
-                *damage -= target->GetMeleeDamageReduction(*damage);
+                // @net-begin: stats-rework
+                // @net-end
             }
             break;
         case CR_CRIT_TAKEN_RANGED:
@@ -12321,7 +12333,8 @@ bool Unit::CanApplyResilience() const
             {
                 if (isCrit)
                     *damage -= target->GetRangedCritDamageReduction(*damage);
-                *damage -= target->GetRangedDamageReduction(*damage);
+                // @net-begin: stats-rework
+                // @net-end
             }
             break;
         case CR_CRIT_TAKEN_SPELL:
@@ -12332,7 +12345,8 @@ bool Unit::CanApplyResilience() const
             {
                 if (isCrit)
                     *damage -= target->GetSpellCritDamageReduction(*damage);
-                *damage -= target->GetSpellDamageReduction(*damage);
+                // @net-begin: stats-rework
+                // @net-end
             }
             break;
         default:
@@ -12357,25 +12371,14 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     if (spellInfo && spellInfo->HasAttribute(SPELL_ATTR7_CANT_MISS))
         return 0.f;
 
-    //calculate miss chance
-    float missChance = victim->GetUnitMissChance();
-
-    // melee attacks while dual wielding have +19% chance to miss
+    // @net-begin: stats-rework
+    float missChance = 5.0f;
+    missChance += skillDiff * 0.5f;
     if (!spellId && haveOffhandWeapon())
-        missChance += 19.0f;
-
-    // bonus from skills is 0.04%
-    //miss_chance -= skillDiff * 0.04f;
-    int32 diff = -skillDiff;
-    if (victim->GetTypeId() == TYPEID_PLAYER)
-        missChance += diff > 0 ? diff * 0.04f : diff * 0.02f;
-    else
-    {
-        missChance += diff > 10 ? 1 + (diff - 10) * 0.4f : diff * 0.1f;
-        float levelFactor = victim->GetLevelForTarget(this);
-        if (levelFactor < 10.f)
-            missChance *= (levelFactor / 10.f);
-    }
+        missChance += 20.0f; // dual wielding = +20% chance to miss
+    if (missChance < 0)
+        missChance = 0;
+    // @net-end
 
     // Spellmod from SPELLMOD_RESIST_MISS_CHANCE
     float resistMissChance = 100.0f;
@@ -12391,12 +12394,8 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     else
         missChance -= m_modMeleeHitChance;
 
-    // miss chance from auras after calculating skill based miss
-    missChance -= GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE);
-    if (attType == RANGED_ATTACK)
-        missChance -= victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_RANGED_HIT_CHANCE);
-    else
-        missChance -= victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_HIT_CHANCE);
+    // @net-begin: stats-rework
+    // @net-end
 
     // @tswow-begin
     if (spellInfo)
@@ -12499,7 +12498,9 @@ float Unit::GetCombatRatingReduction(CombatRating cr) const
 
 uint32 Unit::GetCombatRatingDamageReduction(CombatRating cr, float rate, float cap, uint32 damage) const
 {
-    float percent = std::min(GetCombatRatingReduction(cr) * rate, cap);
+    // @net-begin: stats-rework
+    float percent = GetCombatRatingReduction(cr) * rate;
+    // @net-end
     return CalculatePct(damage, percent);
 }
 
