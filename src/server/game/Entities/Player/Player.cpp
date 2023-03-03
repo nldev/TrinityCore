@@ -2709,42 +2709,9 @@ bool Player::IsMaxLevel() const
 
 void Player::InitTalentForLevel()
 {
-    uint8 level = GetLevel();
-    // talents base at level diff (talents = level - 9 but some can be used already)
-    if (level < 10)
-    {
-        // Remove all talent points
-        if (m_usedTalentCount > 0)                           // Free any used talents
-        {
-            ResetTalents(true); /// @todo: Has to (collectively) be renamed to ResetTalents
-            SetFreeTalentPoints(0);
-        }
-    }
-    else
-    {
-        if (level < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL) || m_specsCount == 0)
-        {
-            m_specsCount = 1;
-            m_activeSpec = 0;
-        }
-
-        uint32 talentPointsForLevel = CalculateTalentsPoints();
-
-        // if used more that have then reset
-        if (m_usedTalentCount > talentPointsForLevel)
-        {
-            if (!GetSession()->HasPermission(rbac::RBAC_PERM_SKIP_CHECK_MORE_TALENTS_THAN_ALLOWED))
-                ResetTalents(true);
-            else
-                SetFreeTalentPoints(0);
-        }
-        // else update amount of free points
-        else
-            SetFreeTalentPoints(talentPointsForLevel - m_usedTalentCount);
-    }
-
-    if (!GetSession()->PlayerLoading())
-        SendTalentsInfoData(false);                         // update at client
+    // @net-begin: disable-talents
+    SetFreeTalentPoints(0);
+    // @net-end
 }
 
 void Player::InitStatsForLevel(bool reapplyMods)
@@ -3066,8 +3033,10 @@ void Player::AddNewMailDeliverTime(time_t deliver_time)
 
 void DeleteSpellFromAllPlayers(uint32 spellId)
 {
-    CharacterDatabaseStatements stmts[2] = {CHAR_DEL_INVALID_SPELL_SPELLS, CHAR_DEL_INVALID_SPELL_TALENTS};
-    for (uint8 i = 0; i < 2; i++)
+    // @net-begin: disable-talents
+    CharacterDatabaseStatements stmts[2] = {CHAR_DEL_INVALID_SPELL_SPELLS};
+    for (uint8 i = 0; i < 1; i++)
+    // @net-end
     {
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(stmts[i]);
 

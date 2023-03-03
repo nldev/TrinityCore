@@ -1787,7 +1787,7 @@ void Pet::InitTalentForLevel()
     if (talentPointsForLevel == 0 || m_usedTalentCount > talentPointsForLevel)
         resetTalents(); // Remove all talent points
 
-    // @net-begin: simple-pets
+    // @net-begin: disable-talents
     SetFreeTalentPoints(0);
     // @net-end
 
