@@ -2094,12 +2094,9 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
         // Immune effects removed from mask
         ihit->EffectMask |= effectMask;
         ihit->ScaleAura = false;
-        if (m_auraScaleMask && ihit->EffectMask == m_auraScaleMask && m_caster != target)
-        {
-            SpellInfo const* auraSpell = m_spellInfo->GetFirstRankSpell();
-            if (uint32(target->GetLevel() + 10) >= auraSpell->SpellLevel)
-                ihit->ScaleAura = true;
-        }
+
+        // @net-begin: flatten-level-scaling
+        // @net-end
         return;
     }
 
@@ -2114,12 +2111,8 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     targetInfo.Healing    = 0;
     targetInfo.IsCrit     = false;
     targetInfo.ScaleAura  = false;
-    if (m_auraScaleMask && targetInfo.EffectMask == m_auraScaleMask && m_caster != target)
-    {
-        SpellInfo const* auraSpell = m_spellInfo->GetFirstRankSpell();
-        if (uint32(target->GetLevel() + 10) >= auraSpell->SpellLevel)
-            targetInfo.ScaleAura = true;
-    }
+    // @net-begin: flatten-level-scaling
+    // @net-end
 
     // Calculate hit result
     WorldObject* caster = m_originalCaster ? m_originalCaster : m_caster;
@@ -7367,8 +7360,9 @@ bool Spell::CheckEffectTarget(Unit const* target, SpellEffectInfo const& spellEf
             if (target->GetCharmerGUID())
                 return false;
             if (int32 value = CalculateDamage(spellEffectInfo))
-                if ((int32)target->GetLevel() > value)
-                    return false;
+                // @net-begin: flatten-level-scaling
+                return false;
+                // @net-end
             break;
         default:
             break;

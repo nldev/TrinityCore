@@ -1561,9 +1561,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
         // 20% base chance
         float chance = 20.0f;
 
-        // there is a newbie protection, at level 10 just 7% base chance; assuming linear function
-        if (victim->GetLevel() < 30)
-            chance = 0.65f * victim->GetLevel() + 0.5f;
+        // @net-begin: flatten-level-scaling
+        // @net-end
 
         uint32 const victimDefense = victim->GetDefenseSkillValue();
         uint32 const attackerMeleeSkill = GetMaxSkillValueForLevel();
@@ -1692,10 +1691,9 @@ void Unit::HandleEmoteCommand(Emote emoteId)
             RoundToInterval(arpPct, 0.f, 100.f);
 
             float maxArmorPen = 0.f;
-            if (victim->GetLevel() < 60)
-                maxArmorPen = float(400 + 85 * victim->GetLevel());
-            else
-                maxArmorPen = 400 + 85 * victim->GetLevel() + 4.5f * 85 * (victim->GetLevel() - 59);
+            // @net-begin: flatten-level-scaling
+            maxArmorPen = float(400 + 85 * 60);
+            // @net-end
 
             // Cap armor penetration to this number
             maxArmorPen = std::min((armor + maxArmorPen) / 3.f, armor);
@@ -1707,7 +1705,9 @@ void Unit::HandleEmoteCommand(Emote emoteId)
     if (armor < 0.0f)
         armor = 0.0f;
 
-    float levelModifier = attacker ? attacker->GetLevel() : attackerLevel;
+    // @net-begin: flatten-level-scaling
+    float levelModifier = 60;
+    // @net-end
     if (levelModifier > 59.f)
         levelModifier = levelModifier + 4.5f * (levelModifier - 59.f);
 
@@ -1823,7 +1823,9 @@ void Unit::HandleEmoteCommand(Emote emoteId)
 
     static uint32 const BOSS_LEVEL = 83;
     static float const BOSS_RESISTANCE_CONSTANT = 510.0f;
-    uint32 level = victim->GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint32 level = 60;
+    // @net-end
     float resistanceConstant = 0.0f;
 
     if (level == BOSS_LEVEL)
@@ -2438,11 +2440,10 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
 // @tswow-begin
 float Unit::CalculateSpellpowerCoefficientLevelPenalty(SpellInfo const* spellInfo) const
 {
-    float result;
-    if (!spellInfo->MaxLevel || GetLevel() < spellInfo->MaxLevel)
-        result = 1.0f;
-    else
-        result = std::max(0.0f, std::min(1.0f, (22.0f + spellInfo->MaxLevel - GetLevel()) / 20.0f));
+
+    // @net-begin: flatten-level-scaling
+    float result = 1.0f;
+    // @net-end
     FIRE_ID(
           spellInfo->events.id
         , Spell,OnCalcSpellPowerLevelPenalty
@@ -6946,8 +6947,10 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
                 if (victim->HasAuraState(AURA_STATE_FROZEN, spellProto, this))
                 {
                     // Glyph of Ice Lance
-                    if (owner->HasAura(56377) && victim->GetLevel() > owner->GetLevel())
+                    // @net-begin: flatten-level-scaling
+                    if (owner->HasAura(56377))
                         DoneTotalMod *= 4.0f;
+                    // @net-end
                     else
                         DoneTotalMod *= 3.0f;
                 }
@@ -7352,11 +7355,8 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                 }
 
                 // Spell crit suppression
-                if (GetTypeId() == TYPEID_UNIT)
-                {
-                    int32 const levelDiff = static_cast<int32>(GetLevelForTarget(caster)) - caster->GetLevel();
-                    crit_chance -= levelDiff * 0.7f;
-                }
+                // @net-begin: flatten-level-scaling
+                // @net-end
             }
             break;
         }
@@ -13319,12 +13319,9 @@ PlayerMovementPendingChange::PlayerMovementPendingChange()
 void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
 {
     float addRage;
-
-    float rageconversion = ((0.0091107836f * GetLevel() * GetLevel()) + 3.225598133f * GetLevel()) + 4.2652911f;
-
-    // Unknown if correct, but lineary adjust rage conversion above level 70
-    if (GetLevel() > 70)
-        rageconversion += 13.27f * (GetLevel() - 70);
+    // @net-begin: flatten-level-scaling
+    float rageconversion = ((0.0091107836f * 60 * 60) + 3.225598133f * 60) + 4.2652911f;
+    // @net-end
 
     if (attacker)
     {

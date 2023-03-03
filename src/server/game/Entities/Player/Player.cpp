@@ -875,7 +875,9 @@ void Player::HandleDrowning(uint32 time_diff)
                 m_MirrorTimer[BREATH_TIMER] += 1 * IN_MILLISECONDS;
                 // Calculate and deal damage
                 /// @todo Check this formula
-                uint32 damage = GetMaxHealth() / 5 + urand(0, GetLevel() - 1);
+                // @net-begin: flatten-level-scaling
+                uint32 damage = GetMaxHealth() / 5 + urand(0, 60);
+                // @net-end
                 EnvironmentalDamage(DAMAGE_DROWNING, damage);
             }
             else if (!(m_MirrorTimerFlagsLast & UNDERWATER_INWATER))      // Update time in client if need
@@ -911,7 +913,9 @@ void Player::HandleDrowning(uint32 time_diff)
                 m_MirrorTimer[FATIGUE_TIMER] += 1 * IN_MILLISECONDS;
                 if (IsAlive())                                            // Calculate and deal damage
                 {
-                    uint32 damage = GetMaxHealth() / 5 + urand(0, GetLevel() - 1);
+                    // @net-begin: flatten-level-scaling
+                    uint32 damage = GetMaxHealth() / 5 + urand(0, 60);
+                    // @net-end
                     EnvironmentalDamage(DAMAGE_EXHAUSTED, damage);
                 }
                 else if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))       // Teleport ghost to graveyard
@@ -2108,8 +2112,8 @@ void Player::Regenerate(Powers power)
             bool recentCast = IsUnderLastManaUseEffect();
             float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
 
-            if (GetLevel() < 15)
-                ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
+            // @net-begin: flatten-level-scaling
+            // @net-end
 
             if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
                 addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
@@ -2212,8 +2216,8 @@ void Player::RegenerateHealth()
 
     float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
 
-    if (GetLevel() < 15)
-        HealthIncreaseRate = sWorld->getRate(RATE_HEALTH) * (2.066f - (GetLevel() * 0.066f));
+    // @net-begin: flatten-level-scaling
+    // @net-end
 
     float addValue = 0.0f;
 
@@ -5386,7 +5390,9 @@ uint32 Player::GetShieldBlockValue() const
 
 float Player::GetMeleeCritFromAgility() const
 {
-    uint8 level = GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint8 level = 60;
+    // @net-end
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5446,7 +5452,9 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
 {
 // @tswow-end
 
-    uint8 level = GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint8 level = 60;
+    // @net-end
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5468,7 +5476,9 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
 
 float Player::GetSpellCritFromIntellect() const
 {
-    uint8 level = GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint8 level = 60;
+    // @net-end
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5485,7 +5495,9 @@ float Player::GetSpellCritFromIntellect() const
 
 float Player::GetRatingMultiplier(CombatRating cr) const
 {
-    uint8 level = GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint8 level = 60;
+    // @net-end
 
     if (level > GT_MAX_LEVEL)
         level = GT_MAX_LEVEL;
@@ -5520,7 +5532,9 @@ float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 
 float Player::OCTRegenHPPerSpirit() const
 {
-    uint8 level = GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint8 level = 60;
+    // @net-end
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -5543,7 +5557,9 @@ float Player::OCTRegenHPPerSpirit() const
 
 float Player::OCTRegenMPPerSpirit() const
 {
-    uint8 level = GetLevel();
+    // @net-begin: flatten-level-scaling
+    uint8 level = 60;
+    // @net-end
     uint32 pclass = GetClass();
 
     if (level > GT_MAX_LEVEL)
@@ -7461,8 +7477,9 @@ ScalingStatValuesEntry const* Player::GetScalingStatValuesFor(ItemTemplate const
     if (!ssd)
         return nullptr;
 
-    // req. check at equip, but allow use for extended range if range limit max level, set proper level
-    uint32 const ssd_level = std::min(uint32(GetLevel()), ssd->Maxlevel);
+    // @net-begin: flatten-level-scaling
+    uint32 const ssd_level = std::min(uint32(60), ssd->Maxlevel);
+    // @net-end
     return sScalingStatValuesStore.LookupEntry(ssd_level);
 }
 
@@ -8168,18 +8185,8 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
                 Unit* target = spellInfo->IsPositive() ? this : damageInfo.GetVictim();
 
                 CastSpellExtraArgs args(item);
-                // reduce effect values if enchant is limited
-                if (entry && (entry->AttributesMask & ENCHANT_PROC_ATTR_LIMIT_60) && target->GetLevel() > 60)
-                {
-                    int32 const lvlDifference = target->GetLevel() - 60;
-                    int32 const lvlPenaltyFactor = 4; // 4% lost effectiveness per level
-
-                    int32 const effectPct = std::max(0, 100 - (lvlDifference * lvlPenaltyFactor));
-
-                    for (SpellEffectInfo const& spellEffectInfo : spellInfo->GetEffects())
-                        if (spellEffectInfo.IsEffect())
-                            args.AddSpellMod(static_cast<SpellValueMod>(SPELLVALUE_BASE_POINT0 + spellEffectInfo.EffectIndex), CalculatePct(spellEffectInfo.CalcValue(this), effectPct));
-                }
+                // @net-begin: flatten-level-scaling
+                // @net-end
                 CastSpell(target, spellInfo->Id, args);
             }
         }
@@ -8751,7 +8758,9 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
                     // Generate extra money for pick pocket loot
                     const uint32 a = urand(0, creature->GetLevel() / 2);
-                    const uint32 b = urand(0, GetLevel() / 2);
+                    // @net-begin: flatten-level-scaling
+                    const uint32 b = urand(0, 60 / 2);
+                    // @net-end
                     loot->gold = uint32(10 * (a + b) * sWorld->getRate(RATE_DROP_MONEY));
                     permission = OWNER_PERMISSION;
                     // @tswow-begin
@@ -24922,7 +24931,9 @@ bool Player::CanCaptureTowerPoint() const
 
 uint32 Player::GetBarberShopCost(uint8 newhairstyle, uint8 newhaircolor, uint8 newfacialhair, BarberShopStyleEntry const* newSkin) const
 {
+    // @net-begin: flatten-level-scaling
     uint8 level = GetLevel();
+    // @net-end
 
     if (level > GT_MAX_LEVEL)
         level = GT_MAX_LEVEL;                               // max level in this dbc

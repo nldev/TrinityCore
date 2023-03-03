@@ -366,7 +366,9 @@ void Spell::EffectSchoolDMG()
                 // Shield Slam
                 if ((m_spellInfo->SpellFamilyFlags[1] & 0x200) && m_spellInfo->GetCategory() == 1209)
                 {
-                    uint8 level = unitCaster->GetLevel();
+                    // @net-begin: flatten-level-scaling
+                    uint8 level = 60;
+                    // @net-end
                     uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 24.5f), uint32(float(level) * 34.5f));
                     damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effectInfo->EffectIndex, float(block_value)));
                 }
@@ -668,7 +670,9 @@ void Spell::EffectSchoolDMG()
                 // Shield of Righteousness
                 if (m_spellInfo->SpellFamilyFlags[EFFECT_1] & 0x100000)
                 {
-                    uint8 level = unitCaster->GetLevel();
+                    // @net-begin: flatten-level-scaling
+                    uint8 level = 60;
+                    // @net-end
                     uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 29.5f), uint32(float(level) * 39.5f));
                     damage += CalculatePct(block_value, m_spellInfo->GetEffect(EFFECT_1).CalcValue());
                     break;
@@ -1760,18 +1764,20 @@ void Spell::EffectEnergize()
     int32 level_diff = 0;
     switch (m_spellInfo->Id)
     {
+        // @net-begin: flatten-level-scaling
         case 9512:                                          // Restore Energy
-            level_diff = unitCaster->GetLevel() - 40;
+            level_diff = 60 - 40;
             level_multiplier = 2;
             break;
         case 24571:                                         // Blood Fury
-            level_diff = unitCaster->GetLevel() - 60;
+            level_diff = 0;
             level_multiplier = 10;
             break;
         case 24532:                                         // Burst of Energy
-            level_diff = unitCaster->GetLevel() - 60;
+            level_diff = 0;
             level_multiplier = 4;
             break;
+        // @net-end
         case 31930:                                         // Judgements of the Wise
         case 63375:                                         // Improved Stormstrike
         case 68082:                                         // Glyph of Seal of Command
