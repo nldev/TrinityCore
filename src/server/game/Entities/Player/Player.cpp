@@ -12014,26 +12014,18 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
 
     if (proto->Class == ITEM_CLASS_ARMOR && proto->SubClass > ITEM_SUBCLASS_ARMOR_MISC && proto->SubClass < ITEM_SUBCLASS_ARMOR_BUCKLER && proto->InventoryType != INVTYPE_CLOAK)
     {
+        // @net-begin: starting-proficiencies
         if (_class == CLASS_WARRIOR || _class == CLASS_PALADIN || _class == CLASS_DEATH_KNIGHT)
         {
-            if (GetLevel() < 40)
-            {
-                if (proto->SubClass != ITEM_SUBCLASS_ARMOR_MAIL)
-                    return EQUIP_ERR_CANT_DO_RIGHT_NOW;
-            }
-            else if (proto->SubClass != ITEM_SUBCLASS_ARMOR_PLATE)
+            if (proto->SubClass != ITEM_SUBCLASS_ARMOR_PLATE)
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
         }
         else if (_class == CLASS_HUNTER || _class == CLASS_SHAMAN)
         {
-            if (GetLevel() < 40)
-            {
-                if (proto->SubClass != ITEM_SUBCLASS_ARMOR_LEATHER)
-                    return EQUIP_ERR_CANT_DO_RIGHT_NOW;
-            }
-            else if (proto->SubClass != ITEM_SUBCLASS_ARMOR_MAIL)
+            if (proto->SubClass != ITEM_SUBCLASS_ARMOR_MAIL)
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
         }
+        // @net-end
 
         if (_class == CLASS_ROGUE || _class == CLASS_DRUID)
             if (proto->SubClass != ITEM_SUBCLASS_ARMOR_LEATHER)
