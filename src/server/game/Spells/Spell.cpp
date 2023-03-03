@@ -7697,9 +7697,11 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, Spe
     if (!unit)
         return;
 
+    // @net-begin: no-combat-on-spell-launch
     // This will only cause combat - the target will engage once the projectile hits (in DoAllEffectOnTarget)
-    if (m_originalCaster && targetInfo.MissCondition != SPELL_MISS_EVADE && !m_originalCaster->IsFriendlyTo(unit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (m_spellInfo->HasInitialAggro() || unit->IsEngaged()))
-        m_originalCaster->SetInCombatWith(unit);
+    // if (m_originalCaster && targetInfo.MissCondition != SPELL_MISS_EVADE && !m_originalCaster->IsFriendlyTo(unit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (m_spellInfo->HasInitialAggro() || unit->IsEngaged()))
+    //     m_originalCaster->SetInCombatWith(unit);
+    // @net-end: no-combat-on-spell-launch
 
     m_damage = 0;
     m_healing = 0;
