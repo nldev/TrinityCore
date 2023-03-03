@@ -21454,9 +21454,19 @@ void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* s
                         return;
                     // Special case for Backdraft: do not apply GCD reduction if cast time reduction was not applied (i.e. when Backlash is consumed first).
                     // (Backdraft is the only PCT_MOD on global cooldown)
-                    else if (op == SPELLMOD_GLOBAL_COOLDOWN)
+                    // @net-begin: global-cooldown-reduction
+                    else if (
+                        (op == SPELLMOD_GLOBAL_COOLDOWN)
+                        && ((mod->spellId == 34935) || (mod->spellId == 34938) || (mod->spellId == 34939))
+                    )
                         return;
+                    // @net-end
                 }
+
+                // @net-begin: global-cooldown-reduction
+                if ((op == SPELLMOD_GLOBAL_COOLDOWN) && (mod->value > 100))
+                    mod->value = 100;
+                // @net-end
 
                 totalmul += CalculatePct(1.0f, mod->value);
                 break;
