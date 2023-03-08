@@ -10590,6 +10590,11 @@ InventoryResult Player::CanStoreItem_InInventorySlots(uint8 slot_begin, uint8 sl
     if (pSrcItem && pSrcItem->IsNotEmptyBag())
         return EQUIP_ERR_CAN_ONLY_DO_WITH_EMPTY_BAGS;
 
+    // @net-begin: totem-pouch
+    if (pSrcItem && (pProto->ItemId == 37606))
+        return EQUIP_ERR_NONE;
+    // @net-end
+
     for (uint32 j = slot_begin; j < slot_end; j++)
     {
         // skip specific slot already processed in first called CanStoreItem_InSpecificSlot
@@ -11629,6 +11634,11 @@ InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec &dest
 {
     if (!pItem)
         return swap ? EQUIP_ERR_ITEMS_CANT_BE_SWAPPED : EQUIP_ERR_ITEM_NOT_FOUND;
+
+    // @net-begin: totem-pouch
+    if ((pItem->GetEntry() == 37606) || (pItem->GetEntry() == 46978))
+        return EQUIP_ERR_NONE;
+    // @net-end
 
     uint32 count = pItem->GetCount();
 
@@ -13171,6 +13181,19 @@ void Player::SwapItem(uint16 src, uint16 dst)
 
     TC_LOG_DEBUG("entities.player.items", "Player::SwapItem: Player '%s' (%s), Bag: %u, Slot: %u, Item: %u",
         GetName().c_str(), GetGUID().ToString().c_str(), dstbag, dstslot, pSrcItem->GetEntry());
+
+    // @net-begin: totem-pouch
+    if (
+        (pSrcItem && (pSrcItem->GetEntry() == 46978))
+          || (pDstItem && (pDstItem->GetEntry() == 46978))
+          || (pSrcItem && (pSrcItem->GetEntry() == 37606))
+          || (pDstItem && (pDstItem->GetEntry() == 37606))
+    )
+    {
+        SendEquipError(EQUIP_ERR_NONE, pSrcItem, pDstItem);
+        return;
+    }
+    // @net-end
 
     if (!IsAlive())
     {
@@ -23261,8 +23284,10 @@ void Player::SendInstanceResetWarning(uint32 mapid, Difficulty difficulty, uint3
 
 void Player::ApplyEquipCooldown(Item* pItem)
 {
-    if (pItem->GetTemplate()->HasFlag(ITEM_FLAG_NO_EQUIP_COOLDOWN))
+    // @net-begin: reduce-equip-cooldown
+    if (pItem->GetTemplate()->HasFlag(ITEM_FLAG_NO_EQUIP_COOLDOWN) || pItem->GetTemplate()->Class == ITEM_CLASS_WEAPON || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPONOFFHAND || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPONMAINHAND || pItem->GetTemplate()->InventoryType == INVTYPE_SHIELD || pItem->GetTemplate()->InventoryType == INVTYPE_RANGED || pItem->GetTemplate()->InventoryType == INVTYPE_RANGEDRIGHT || pItem->GetTemplate()->InventoryType == INVTYPE_HOLDABLE || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPON || pItem->GetTemplate()->InventoryType == INVTYPE_RELIC || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPONOFFHAND)
         return;
+    // @net-end
 
     TimePoint now = GameTime::Now();
     for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
