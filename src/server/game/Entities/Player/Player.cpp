@@ -10517,6 +10517,11 @@ InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemP
 
 InventoryResult Player::CanStoreItem_InBag(uint8 bag, ItemPosCountVec &dest, ItemTemplate const* pProto, uint32& count, bool merge, bool non_specialized, Item* pSrcItem, uint8 skip_bag, uint8 skip_slot) const
 {
+    // @net-begin: totem-pouch
+    if ((pProto && (pProto->ItemId == 37606)) || (pProto && (pProto->ItemId == 46978)))
+        return EQUIP_ERR_NONE;
+    // @net-end
+
     // skip specific bag already processed in first called CanStoreItem_InBag
     if (bag == skip_bag)
         return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
@@ -10591,7 +10596,7 @@ InventoryResult Player::CanStoreItem_InInventorySlots(uint8 slot_begin, uint8 sl
         return EQUIP_ERR_CAN_ONLY_DO_WITH_EMPTY_BAGS;
 
     // @net-begin: totem-pouch
-    if (pSrcItem && (pProto->ItemId == 37606))
+    if ((pProto && (pProto->ItemId == 37606)) || (pProto && (pProto->ItemId == 46978)))
         return EQUIP_ERR_NONE;
     // @net-end
 
