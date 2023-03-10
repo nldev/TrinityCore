@@ -23289,10 +23289,8 @@ void Player::SendInstanceResetWarning(uint32 mapid, Difficulty difficulty, uint3
 
 void Player::ApplyEquipCooldown(Item* pItem)
 {
-    // @net-begin: reduce-equip-cooldown
-    if (pItem->GetTemplate()->HasFlag(ITEM_FLAG_NO_EQUIP_COOLDOWN) || pItem->GetTemplate()->Class == ITEM_CLASS_WEAPON || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPONOFFHAND || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPONMAINHAND || pItem->GetTemplate()->InventoryType == INVTYPE_SHIELD || pItem->GetTemplate()->InventoryType == INVTYPE_RANGED || pItem->GetTemplate()->InventoryType == INVTYPE_RANGEDRIGHT || pItem->GetTemplate()->InventoryType == INVTYPE_HOLDABLE || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPON || pItem->GetTemplate()->InventoryType == INVTYPE_RELIC || pItem->GetTemplate()->InventoryType == INVTYPE_WEAPONOFFHAND)
+    if (pItem->GetTemplate()->HasFlag(ITEM_FLAG_NO_EQUIP_COOLDOWN))
         return;
-    // @net-end
 
     TimePoint now = GameTime::Now();
     for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
