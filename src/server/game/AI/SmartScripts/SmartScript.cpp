@@ -298,8 +298,8 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
           e.GetActionType()
         , SmartAction,OnActivateEarly
         , values
-        , TSMutable<bool>(&shouldCancel)
-        , TSMutable<bool>(&shouldCancelLink)
+        , TSMutable<bool,bool>(&shouldCancel)
+        , TSMutable<bool,bool>(&shouldCancelLink)
     );
     if(e.GetActionType() < TSWOW_ACTION_OFFSET )
     // @tswow-end
@@ -2393,7 +2393,7 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
           e.GetActionType()
         , SmartAction,OnActivateLate
         , values
-        , TSMutable<bool>(&shouldCancelLink)
+        , TSMutable<bool,bool>(&shouldCancelLink)
     );
     if (!shouldCancelLink && e.link && e.link != e.event_id)
     // @tswow-end
@@ -2979,6 +2979,7 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
         case SMART_EVENT_JUST_CREATED:
         case SMART_EVENT_FOLLOW_COMPLETED:
         case SMART_EVENT_ON_SPELLCLICK:
+        case SMART_EVENT_ON_DESPAWN:
             ProcessAction(e, unit, var0, var1, bvar, spell, gob);
             break;
         case SMART_EVENT_GOSSIP_HELLO:
