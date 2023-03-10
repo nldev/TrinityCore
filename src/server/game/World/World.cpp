@@ -1449,7 +1449,7 @@ void World::LoadConfigSettings(bool reload)
     m_bool_configs[CONFIG_SHOW_BAN_IN_WORLD] = sConfigMgr->GetBoolDefault("ShowBanInWorld", false);
     // @tswow-begin - only allow one thread if using lua
     uint32 mapUpdateThreads = m_int_configs[CONFIG_NUMTHREADS] = sConfigMgr->GetIntDefault("MapUpdate.Threads", 1);
-    if (m_int_configs[CONFIG_TSWOW_LUA_ENABLED] && mapUpdateThreads > 1)
+    if (m_bool_configs[CONFIG_TSWOW_LUA_ENABLED] && mapUpdateThreads > 1)
     {
         m_int_configs[CONFIG_NUMTHREADS] = 1;
         TC_LOG_ERROR("server.loading", "MapUpdate.Threads cannot be %i when TSWoW Lua is enabled. Set to 1.", mapUpdateThreads);
@@ -1828,9 +1828,6 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Spawn Group Templates...");
     sObjectMgr->LoadSpawnGroupTemplates();
 
-    TC_LOG_INFO("server.loading", "Loading instance spawn groups...");
-    sObjectMgr->LoadInstanceSpawnGroups();
-
     TC_LOG_INFO("server.loading", "Loading Creature Data...");
     sObjectMgr->LoadCreatures();
 
@@ -1854,6 +1851,9 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Spawn Group Data...");
     sObjectMgr->LoadSpawnGroups();
+
+    TC_LOG_INFO("server.loading", "Loading instance spawn groups...");
+    sObjectMgr->LoadInstanceSpawnGroups();
 
     TC_LOG_INFO("server.loading", "Loading GameObject Addon Data...");
     sObjectMgr->LoadGameObjectAddons();                          // must be after LoadGameObjects()

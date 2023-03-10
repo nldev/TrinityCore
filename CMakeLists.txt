@@ -18,7 +18,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 project(TrinityCore)
 
 #tswow-begin add tswow sources
-
+cmake_policy(SET CMP0135 NEW) # use local timestamps for FetchContent
 include(FetchContent)
 
 FetchContent_Declare(lua
@@ -38,14 +38,11 @@ endif()
 # sol2
 #
 FetchContent_Declare (sol2
-  GIT_REPOSITORY https://github.com/tswow/sol2
-  GIT_TAG b9c83d5ecf6bc9503dc66779f2395dc32dffb1e5
+  GIT_REPOSITORY https://github.com/ThePhD/sol2
+  GIT_TAG 4de99c5b41b64b7e654bf8e48b177e8414a756b7
 )
 FetchContent_MakeAvailable (sol2)
-add_library (sane-sol2 INTERFACE)
-add_library (sol2::sane ALIAS sane-sol2)
-target_link_libraries (sane-sol2 INTERFACE liblua)
-target_include_directories (sane-sol2 SYSTEM INTERFACE "${sol2_SOURCE_DIR}/include")
+target_compile_definitions(sol2 INTERFACE SOL_NO_CHECK_NUMBER_PRECISION)
 
 #
 # sourcemap
@@ -74,11 +71,24 @@ endif()
 #
 # tracy
 #
-SET(TRACY_ON_DEMAND ON CACHE BOOL "")
+
+if(WIN32)
+  SET(TRACY_NO_CALLSTACK ON CACHE BOOL "" FORCE)
+  SET(TRACY_NO_SAMPLING ON CACHE BOOL "" FORCE)
+  SET(TRACY_NO_CALLSTACK_INLINES ON CACHE BOOL "" FORCE)
+  SET(TRACY_NO_SYSTEM_TRACING ON CACHE BOOL "" FORCE)
+  SET(TRACY_CALLSTACK OFF CACHE BOOL "" FORCE)
+  SET(TRACY_NO_CONTEXT_SWITCH ON CACHE BOOL "" FORCE)
+  SET(TRACY_NO_VSYNC_CAPTURE ON CACHE BOOL "" FORCE)
+  SET(TRACY_NO_FRAME_IMAGE ON CACHE BOOL "" FORCE)
+  SET(TRACY_NO_CRASH_HANDLER ON CACHE BOOL "" FORCE)
+endif()
+SET(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)
+SET(TRACY_ONLY_LOCALHOST OFF CACHE BOOL "" FORCE)
 FetchContent_Declare (
   tracy
   GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-  GIT_TAG 80f6a93da79af94fc4604e37439f5a75d5e7dfbd
+  GIT_TAG a8511d357650282c6915f7aa9775e9c4945e42b5
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
 )
