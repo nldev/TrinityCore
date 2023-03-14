@@ -195,7 +195,7 @@ class spell_rog_deadly_brew : public AuraScript
     }
 };
 
-// @net-begin: nerf-deadly-poison
+// @net-begin: vanilla-deadly-poison
 // @net-end
 
 // 51690 - Killing Spree
@@ -895,7 +895,8 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellScript(spell_rog_cheat_death);
     RegisterSpellScript(spell_rog_cut_to_the_chase);
     RegisterSpellScript(spell_rog_deadly_brew);
-    RegisterSpellScript(spell_rog_deadly_poison);
+    // @net-begin: vanilla-deadly-poison
+    // @net-end
     new spell_rog_killing_spree();
     RegisterSpellScript(spell_rog_nerves_of_steel);
     RegisterSpellScriptWithArgs(spell_rog_overkill_mos<SPELL_ROGUE_OVERKILL_BUFF>, "spell_rog_overkill");
