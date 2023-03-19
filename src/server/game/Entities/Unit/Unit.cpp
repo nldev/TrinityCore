@@ -8996,9 +8996,8 @@ void Unit::IncrDiminishing(SpellInfo const* auraSpellInfo, bool triggered)
 bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool triggered, int32& duration, WorldObject* caster, DiminishingLevels previousLevel) const
 {
     DiminishingGroup const group = auraSpellInfo->GetDiminishingReturnsGroupForSpell(triggered);
-    if (duration == -1 || group == DIMINISHING_NONE)
-        return true;
-
+    // @net-begin: on-apply-diminishing-return-hook
+    // @net-end
     int32 const limitDuration = auraSpellInfo->GetDiminishingReturnsLimitDuration(triggered);
 
     // test pet/charm masters instead pets/charmeds
@@ -9061,6 +9060,9 @@ bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool trigg
         , previousLevel
         , mod
     );
+
+    if (duration == -1 || group == DIMINISHING_NONE)
+        return true;
     // @net-end
 
     return (duration != 0);
