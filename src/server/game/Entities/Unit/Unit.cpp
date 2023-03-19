@@ -9048,20 +9048,21 @@ bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool trigg
         }
     }
 
-    /* @tswow-begin */
+    // @net-begin: on-apply-diminishing-return-hook
     int32 oldDuration = duration;
     uint8 level = previousLevel;
     duration = int32(duration * mod);
 
     FIRE(Unit,OnApplyDiminishingReturn
         , TSUnit(const_cast<Unit*>(this))
+        , TSWorldObject(const_cast<WorldObject*>(caster))
         , TSSpellInfo(auraSpellInfo)
         , TSMutable<int32>(&duration)
         , oldDuration
         , level
         , mod
     );
-    /* @tswow-end */
+    // @net-end
 
     return (duration != 0);
 }
