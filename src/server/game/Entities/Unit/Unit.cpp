@@ -9050,7 +9050,6 @@ bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool trigg
 
     // @net-begin: on-apply-diminishing-return-hook
     int32 oldDuration = duration;
-    uint8 level = previousLevel;
     duration = int32(duration * mod);
 
     FIRE(Unit,OnApplyDiminishingReturn
@@ -9059,7 +9058,7 @@ bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool trigg
         , TSSpellInfo(auraSpellInfo)
         , TSMutable<int32>(&duration)
         , oldDuration
-        , level
+        , previousLevel
         , mod
     );
     // @net-end
