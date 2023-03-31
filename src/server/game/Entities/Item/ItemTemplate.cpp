@@ -61,7 +61,7 @@ bool ItemTemplate::CanChangeEquipStateInCombat() const
           events.id
         , Item,OnCanChangeEquipState
         , TSItemTemplate(this)
-        , TSMutable<bool>(&canChange)
+        , TSMutable<bool,bool>(&canChange)
     );
     return canChange;
     // @tswow-end
@@ -85,6 +85,17 @@ int32 ItemTemplate::getFeralBonus(int32 extraDPS /*= 0*/) const
     if (Class == ITEM_CLASS_WEAPON && (1 << SubClass) & 0x02A5F3)
     {
         int32 bonus = int32((extraDPS + getDPS()) * 14.0f) - 767;
+
+        // @tswow-start
+        FIRE_ID(
+            this->events.id
+            , Item,OnCalculateFeralAttackPower
+            , TSItemTemplate(this)
+            , extraDPS
+            , TSMutableNumber<int32>(&bonus)
+        );
+        // @tswow-end
+
         if (bonus < 0)
             return 0;
         return bonus;

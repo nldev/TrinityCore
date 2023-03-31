@@ -216,8 +216,8 @@ void GameObject::AddToWorld()
     {
         // @tswow-begin
         bool b = false;
-        FIRE_ID(GetGOInfo()->events.id,GameObject,OnCreate,TSGameObject(this),TSMutable<bool>(&b));
-        FIRE_ID(GetMap()->GetId(),Map,OnGameObjectCreate,TSMap(GetMap()),TSGameObject(this),TSMutable<bool>(&b));
+        FIRE_ID(GetGOInfo()->events.id,GameObject,OnCreate,TSGameObject(this),TSMutable<bool,bool>(&b));
+        FIRE_ID(GetMap()->GetId(),Map,OnGameObjectCreate,TSMap(GetMap()),TSGameObject(this),TSMutable<bool,bool>(&b));
         if(b)
         {
             // TODO: Is this enough?
@@ -1278,7 +1278,7 @@ bool GameObject::IsNeverVisible() const
     if (WorldObject::IsNeverVisible())
         return true;
 
-    if (GetGoType() == GAMEOBJECT_TYPE_SPELL_FOCUS && GetGOInfo()->spellFocus.serverOnly == 1)
+    if (GetGOInfo()->GetServerOnly())
         return true;
 
     return false;
@@ -1600,7 +1600,7 @@ void GameObject::Use(Unit* user)
     // @tswow-begin
     WorldObject* target = user;
     bool shouldCancel = false;
-    FIRE_ID(GetGOInfo()->events.id,GameObject,OnUse,TSGameObject(this),TSUnit(user),TSMutable<bool>(&shouldCancel));
+    FIRE_ID(GetGOInfo()->events.id,GameObject,OnUse,TSGameObject(this),TSUnit(user),TSMutable<bool,bool>(&shouldCancel));
     if(shouldCancel)
     {
         return;
@@ -1627,7 +1627,7 @@ void GameObject::Use(Unit* user)
             , GameObject,OnGossipHello
             , TSGameObject(this)
             , TSPlayer(playerUser)
-            , TSMutable<bool>(&b)
+            , TSMutable<bool,bool>(&b)
         );
         if (AI()->OnGossipHello(playerUser))
         // @tswow-end

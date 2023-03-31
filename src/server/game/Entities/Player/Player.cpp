@@ -572,7 +572,10 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
 
     if (m_session->HasPermission(rbac::RBAC_PERM_USE_START_GM_LEVEL))
     {
-        uint32 gm_level = sWorld->getIntConfig(CONFIG_START_GM_LEVEL);
+        uint32 gm_level = GetClass() != CLASS_DEATH_KNIGHT
+            ? sWorld->getIntConfig(CONFIG_START_GM_LEVEL)
+            : std::max(sWorld->getIntConfig(CONFIG_START_GM_LEVEL), sWorld->getIntConfig(CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL));
+
         if (gm_level > start_level)
             start_level = gm_level;
     }
@@ -1761,7 +1764,10 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     else
     {
         if (GetClass() == CLASS_DEATH_KNIGHT && GetMapId() == 609 && !IsGameMaster() && !HasSpell(50977))
+        {
+            SendTransferAborted(mapid, TRANSFER_ABORT_UNIQUE_MESSAGE, 1);
             return false;
+        }
 
         // far teleport to another map
         Map* oldmap = IsInWorld() ? GetMap() : nullptr;
@@ -2005,7 +2011,8 @@ void Player::SetObjectScale(float scale)
     SetCombatReach(scale * DEFAULT_PLAYER_COMBAT_REACH);
 }
 
-bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster) const
+bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster,
+    bool requireImmunityPurgesEffectAttribute /*= false*/) const
 {
     // players are immune to taunt (the aura and the spell effect)
     if (spellEffectInfo.IsAura(SPELL_AURA_MOD_TAUNT))
@@ -2013,7 +2020,7 @@ bool Player::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo 
     if (spellEffectInfo.IsEffect(SPELL_EFFECT_ATTACK_ME))
         return true;
 
-    return Unit::IsImmunedToSpellEffect(spellInfo, spellEffectInfo, caster);
+    return Unit::IsImmunedToSpellEffect(spellInfo, spellEffectInfo, caster, requireImmunityPurgesEffectAttribute);
 }
 
 void Player::RegenerateAll()
@@ -3873,7 +3880,7 @@ bool Player::ResetTalents(bool no_cost)
     FIRE(
           Player,OnTalentsResetEarly
         , TSPlayer(this)
-        , TSMutable<bool>(&no_cost)
+        , TSMutable<bool,bool>(&no_cost)
     );
     // @tswow-end
     sScriptMgr->OnPlayerTalentsReset(this, no_cost);
@@ -5722,7 +5729,7 @@ inline int SkillGainChance(Player* player, uint32 skillId, uint32 SkillValue, ui
 
     FIRE(Player,OnCalcSkillGainChance
         , TSPlayer(player)
-        , TSMutable<int>(&chance)
+        , TSMutableNumber<int32>(&chance)
         , skillId
         , SkillValue
         , GrayLevel
@@ -6112,10 +6119,9 @@ void Player::SetSkill(uint32 id, uint16 step, uint16 newVal, uint16 maxVal)
                 mSkillStatus.erase(itr);
 
             // remove all spells that related to this skill
-            for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
-                if (SkillLineAbilityEntry const* pAbility = sSkillLineAbilityStore.LookupEntry(j))
-                    if (pAbility->SkillLine == id)
-                        RemoveSpell(sSpellMgr->GetFirstSpellInChain(pAbility->Spell));
+            if (std::vector<SkillLineAbilityEntry const*> const* skillLineAbilities = GetSkillLineAbilitiesBySkill(id))
+                for (SkillLineAbilityEntry const* skillLineAbility : *skillLineAbilities)
+                    RemoveSpell(sSpellMgr->GetFirstSpellInChain(skillLineAbility->Spell));
         }
     }
     else if (newVal)                                        //add
@@ -6446,12 +6452,12 @@ void Player::SendMessageToSetInRange(WorldPacket const* data, float dist, bool s
     Cell::VisitWorldObjects(this, notifier, dist);
 }
 
-void Player::SendMessageToSetInRange(WorldPacket const* data, float dist, bool self, bool own_team_only) const
+void Player::SendMessageToSetInRange(WorldPacket const* data, float dist, bool self, bool own_team_only, bool required3dDist /*= false*/) const
 {
     if (self)
         SendDirectMessage(data);
 
-    Trinity::MessageDistDeliverer notifier(this, data, dist, own_team_only);
+    Trinity::MessageDistDeliverer notifier(this, data, dist, own_team_only, nullptr, required3dDist);
     Cell::VisitWorldObjects(this, notifier, dist);
 }
 
@@ -8695,7 +8701,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             {
                 // @tswow-begin
                 bool b = creature->CanGeneratePickPocketLoot();
-                FIRE_ID(creature->GetCreatureTemplate()->events.id,Creature,OnCanGeneratePickPocketLoot,TSCreature(creature),TSPlayer(this),TSMutable<bool>(&b));
+                FIRE_ID(creature->GetCreatureTemplate()->events.id,Creature,OnCanGeneratePickPocketLoot,TSCreature(creature),TSPlayer(this),TSMutable<bool,bool>(&b));
                 if (b)
                 // @tswow-end
                 {
@@ -11570,7 +11576,7 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16 &dest, Item* pItem, bool
                 , TSPlayer(const_cast<Player*>(this))
                 , slot
                 , swap
-                , TSMutable<uint32>(&evtRes)
+                , TSMutableNumber<uint32>(&evtRes)
             );
             return InventoryResult(evtRes);
             // @tswow-end
@@ -11629,7 +11635,7 @@ InventoryResult Player::CanUnequipItem(uint16 pos, bool swap) const
             , TSItem(pItem)
             , TSPlayer(const_cast<Player*>(this))
             , swap
-            , TSMutable<uint32>(&status)
+            , TSMutableNumber<uint32>(&status)
             );
     return static_cast<InventoryResult>(status);
     // @tswow-end
@@ -11662,7 +11668,7 @@ InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec &dest
             , bag
             , slot
             , swap
-            , TSMutable<uint32>(&eventRes)
+            , TSMutableNumber<uint32>(&eventRes)
             );
     InventoryResult eventResEnum = static_cast<InventoryResult>(eventRes);
     if(eventResEnum != InventoryResult::EQUIP_ERR_OK)
@@ -11906,7 +11912,7 @@ InventoryResult Player::CanUseItem(Item* pItem, bool not_loading) const
                         , Item,OnCanUse
                         , TSItem(pItem)
                         , TSPlayer(const_cast<Player*>(this))
-                        , TSMutable<uint32>(&evtRes)
+                        , TSMutableNumber<uint32>(&evtRes)
                         );
                 InventoryResult evtResEnum = static_cast<InventoryResult>(evtRes);
                 if(evtResEnum != InventoryResult::EQUIP_ERR_OK)
@@ -11963,7 +11969,7 @@ InventoryResult Player::CanUseItem(ItemTemplate const* proto) const
         , Item,OnCanUseType
         , TSItemTemplate(proto)
         , TSPlayer(const_cast<Player*>(this))
-        , TSMutable<uint32>(&res)
+        , TSMutableNumber<uint32>(&res)
     )
     return InventoryResult(res);
     // @tswow-end
@@ -11990,7 +11996,7 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
             , TSItemTemplate(proto)
             , TSWorldObject(const_cast<WorldObject*>(lootedObject))
             , TSPlayer(const_cast<Player*>(this))
-            , TSMutable<int32>(&evtRes)
+            , TSMutableNumber<int32>(&evtRes)
             );
     InventoryResult evtResEnum = static_cast<InventoryResult>(evtRes);
     if(evtRes >= 0)
@@ -12650,7 +12656,7 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
                     , Item,OnDestroyEarly
                     , TSItem(pItem)
                     , TSPlayer(this)
-                    , TSMutable<bool>(&evtCanDestroy)
+                    , TSMutable<bool,bool>(&evtCanDestroy)
                     );
             if(!evtCanDestroy)
             {
@@ -15482,7 +15488,7 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
         , Quest,OnRewardXP
         , TSQuest(quest)
         , TSPlayer(this)
-        , TSMutable<uint32>(&XP)
+        , TSMutableNumber<uint32>(&XP)
     );
     // @tswow-end
 
@@ -21127,7 +21133,7 @@ void Player::Say(std::string_view text, Language language, WorldObject const* /*
 
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_SAY, language, this, this, _text);
-    SendMessageToSetInRange(&data, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_SAY), true);
+    SendMessageToSetInRange(&data, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_SAY), true, false, true);
 }
 
 void Player::Say(uint32 textId, WorldObject const* target /*= nullptr*/)
@@ -21142,7 +21148,7 @@ void Player::Yell(std::string_view text, Language language, WorldObject const* /
 
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_YELL, language, this, this, _text);
-    SendMessageToSetInRange(&data, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_YELL), true);
+    SendMessageToSetInRange(&data, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_YELL), true, false, true);
 }
 
 void Player::Yell(uint32 textId, WorldObject const* target /*= nullptr*/)
@@ -21157,7 +21163,7 @@ void Player::TextEmote(std::string_view text, WorldObject const* /*= nullptr*/, 
 
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_EMOTE, LANG_UNIVERSAL, this, this, _text);
-    SendMessageToSetInRange(&data, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_TEXTEMOTE), true, !GetSession()->HasPermission(rbac::RBAC_PERM_TWO_SIDE_INTERACTION_CHAT));
+    SendMessageToSetInRange(&data, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_TEXTEMOTE), true, !GetSession()->HasPermission(rbac::RBAC_PERM_TWO_SIDE_INTERACTION_CHAT), true);
 }
 
 void Player::TextEmote(uint32 textId, WorldObject const* target /*= nullptr*/, bool /*isBossEmote = false*/)
@@ -22133,7 +22139,7 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uin
         , TSCreature(creature)
         , TSItemTemplate(pProto)
         , TSPlayer(this)
-        , TSMutable<bool>(&shouldSend)
+        , TSMutable<bool,bool>(&shouldSend)
     )
     if (!shouldSend)
     {
@@ -23544,12 +23550,12 @@ void Player::LearnSkillRewardedSpells(uint32 skillId, uint32 skillValue)
 {
     uint32 raceMask  = GetRaceMask();
     uint32 classMask = GetClassMask();
-    for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
-    {
-        SkillLineAbilityEntry const* ability = sSkillLineAbilityStore.LookupEntry(j);
-        if (!ability || ability->SkillLine != skillId)
-            continue;
+    std::vector<SkillLineAbilityEntry const*> const* skillLineAbilities = GetSkillLineAbilitiesBySkill(skillId);
+    if (!skillLineAbilities)
+        return;
 
+    for (SkillLineAbilityEntry const* ability : *skillLineAbilities)
+    {
         if (!sSpellMgr->GetSpellInfo(ability->Spell))
             continue;
 
@@ -23872,7 +23878,7 @@ float Player::GetReputationPriceDiscount(FactionTemplateEntry const* factionTemp
         , TSPlayer(const_cast<Player*>(this))
         , TSFactionTemplate(factionTemplate)
         , TSCreature(const_cast<Creature*>(creature))
-        , TSMutable<float>(&money)
+        , TSMutableNumber<float>(&money)
     );
     return money;
 }
@@ -24971,7 +24977,7 @@ void Player::InitGlyphsForLevel()
     // @tswow-begin
     FIRE(Player,OnGlyphInitForLevel
         , TSPlayer(this)
-        , TSMutable<uint32>(&value)
+        , TSMutableNumber<uint32>(&value)
     );
     // @tswow-end
 
@@ -25379,7 +25385,7 @@ uint32 Player::CalculateTalentsPoints() const
     FIRE(
           Player,OnCalcTalentPoints
         , TSPlayer(const_cast<Player*>(this))
-        , TSMutable<uint32>(&out_talent)
+        , TSMutableNumber<uint32>(&out_talent)
     )
         return out_talent;
 }
@@ -25683,6 +25689,17 @@ void Player::CompletedAchievement(AchievementEntry const* entry)
 }
 
 // @tswow-begin
+void Player::UnlockAchievement(uint32 entry)
+{
+    AchievementEntry const* achievement = sAchievementMgr->GetAchievement(entry);
+    if (!achievement)
+        return;
+
+    CompletedAchievement(achievement);
+}
+// @tswow-end
+
+// @tswow-begin
 uint32 Player::GetTalentPointsInTree(uint32 tabId)
 {
     uint32 spentPoints = 0;
@@ -25778,7 +25795,7 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
 
     // @tswow-begin
     bool cancel = false;
-    FIRE(Player,OnLearnTalent, TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool>(&cancel));
+    FIRE(Player,OnLearnTalent, TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool,bool>(&cancel));
     if (cancel)
     {
         return;

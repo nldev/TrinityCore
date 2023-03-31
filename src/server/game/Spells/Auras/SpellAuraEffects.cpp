@@ -5129,7 +5129,7 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
         this->m_spellInfo->events.id
         , Spell,OnPeriodicDamage
         , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSMutable<uint32>(&damage)
+        , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
 
@@ -5171,7 +5171,7 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
           m_spellInfo->events.id
         , Spell,OnCalcAuraCrit
         , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSMutable<float>(&crit_chance)
+        , TSMutableNumber<float>(&crit_chance)
     );
     bool crit = roll_chance_f(crit_chance);
     // @tswow-end
@@ -5258,7 +5258,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         this->m_spellInfo->events.id
         , Spell,OnPeriodicDamage
         , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSMutable<uint32>(&damage)
+        , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
 
@@ -5273,7 +5273,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         m_spellInfo->events.id
         , Spell,OnCalcAuraCrit
         , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSMutable<float>(&crit_chance)
+        , TSMutableNumber<float>(&crit_chance)
     );
     bool crit = roll_chance_f(crit_chance);
     // @tswow-end
@@ -5400,7 +5400,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
           this->m_spellInfo->events.id
         , Spell,OnPeriodicDamage
         , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSMutable<uint32>(&damage)
+        , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
 
@@ -5421,7 +5421,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
         m_spellInfo->events.id
         , Spell,OnCalcAuraCrit
         , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSMutable<float>(&crit_chance)
+        , TSMutableNumber<float>(&crit_chance)
     );
     bool crit = roll_chance_f(crit_chance);
     // @tswow-end
@@ -5648,7 +5648,7 @@ void AuraEffect::HandlePeriodicPowerBurnAuraTick(Unit* target, Unit* caster) con
     damageInfo.periodicLog = true;
     // no SpellDamageBonus for burn mana
     // @tswow-begin effect mask
-    caster->CalculateSpellDamageTaken(&damageInfo, int32(gain * dmgMultiplier), spellProto, BASE_ATTACK, false, nullptr, 1<<GetSpellEffectInfo().EffectIndex);
+    caster->CalculateSpellDamageTaken(&damageInfo, int32(gain * dmgMultiplier), spellProto, BASE_ATTACK, false, false, nullptr, 1 << GetSpellEffectInfo().EffectIndex);
     // @tswow-end
 
     Unit::DealDamageMods(damageInfo.target, damageInfo.damage, &damageInfo.absorb);
@@ -5752,7 +5752,7 @@ void AuraEffect::HandleProcTriggerDamageAuraProc(AuraApplication* aurApp, ProcEv
     uint32 damage = target->SpellDamageBonusDone(triggerTarget, GetSpellInfo(), GetAmount(), SPELL_DIRECT_DAMAGE, GetSpellEffectInfo(), { });
     damage = triggerTarget->SpellDamageBonusTaken(target, GetSpellInfo(), damage, SPELL_DIRECT_DAMAGE);
     // @tswow-begin effect mask
-    target->CalculateSpellDamageTaken(&damageInfo, damage, GetSpellInfo(), BASE_ATTACK, false, nullptr, 1 << GetSpellEffectInfo().EffectIndex);
+    target->CalculateSpellDamageTaken(&damageInfo, damage, GetSpellInfo(), BASE_ATTACK, false, false, nullptr, 1 << GetSpellEffectInfo().EffectIndex);
     // @tswow-end
     Unit::DealDamageMods(damageInfo.target, damageInfo.damage, &damageInfo.absorb);
     target->SendSpellNonMeleeDamageLog(&damageInfo);
