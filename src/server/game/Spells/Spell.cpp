@@ -8347,7 +8347,7 @@ void Spell::TriggerGlobalCooldown()
     }
 
     // @tswow-begin
-    FIRE_ID(m_spellInfo->events.id,Spell,OnDetermineGlobalCooldown,TSSpell(this),TSMutable<int32>(&gcd));
+    FIRE_ID(m_spellInfo->events.id,Spell,OnDetermineGlobalCooldown,TSSpell(this),TSMutableNumber<int32>(&gcd));
     // @tswow-end
     if (gcd)
         m_caster->ToUnit()->GetSpellHistory()->AddGlobalCooldown(m_spellInfo, gcd);

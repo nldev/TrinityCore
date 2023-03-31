@@ -2252,13 +2252,13 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     FIRE(Unit,OnCalcMeleeOutcome
         , TSUnit(const_cast<Unit*>(this))
         , TSUnit(const_cast<Unit*>(victim))
-        , TSMutable<float>(&miss_chance_f)
-        , TSMutable<float>(&crit_chance_f)
-        , TSMutable<float>(&dodge_chance_f)
-        , TSMutable<float>(&block_chance_f)
-        , TSMutable<float>(&parry_chance_f)
-        , TSMutable<float>(&glancing_chance_f)
-        , TSMutable<float>(&crushing_chance_f)
+        , TSMutableNumber<float>(&miss_chance_f)
+        , TSMutableNumber<float>(&crit_chance_f)
+        , TSMutableNumber<float>(&dodge_chance_f)
+        , TSMutableNumber<float>(&block_chance_f)
+        , TSMutableNumber<float>(&parry_chance_f)
+        , TSMutableNumber<float>(&glancing_chance_f)
+        , TSMutableNumber<float>(&crushing_chance_f)
         , attType
         );
 
@@ -2709,20 +2709,20 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     FIRE_ID(
         spellInfo->events.id
-        , Spell, OnCalcMeleeResult
+        , Spell,OnCalcMeleeResult
         , TSSpellInfo(spellInfo)
         , TSUnit(const_cast<Unit*>(this))
         , TSUnit(const_cast<Unit*>(victim))
-        , TSMutable<uint32>(&result)
-        , attType
-        , resistChance
-        , deflectChance
-        , parryChance
-        , dodgeChance
-        , blockChance
-        , missChance
-        , hitChance
-        , skillDiff
+        , TSMutableNumber<uint32>(&result)
+        , TSNumber<uint8>(attType)
+        , TSNumber<uint32>(resistChance)
+        , TSNumber<uint32>(deflectChance)
+        , TSNumber<uint32>(parryChance)
+        , TSNumber<uint32>(dodgeChance)
+        , TSNumber<uint32>(blockChance)
+        , TSNumber<uint32>(missChance)
+        , TSNumber<uint32>(hitChance)
+        , TSNumber<int32>(skillDiff)
     );
 
     return SpellMissInfo(result);
@@ -4111,11 +4111,27 @@ void Unit::RemoveAurasWithAttribute(uint32 flags)
 {
     for (AuraApplicationMap::iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end();)
     {
-        SpellInfo const* spell = iter->second->GetBase()->GetSpellInfo();
+        // @net-begin: on-periodic-remove-aura
+        bool removed = false;
+        Aura* aura = iter->second->GetBase();
+        SpellInfo const* spell = aura->GetSpellInfo();
         if (spell->Attributes & flags)
+        {
+            removed = true;
+            FIRE_ID(
+                spell->events.id
+                , Spell,OnPeriodicRemoveAura
+                , TSSpellInfo(spell)
+                , TSAura(aura)
+                , TSMutable<bool,bool>(&removed)
+                , TSNumber<uint32>(flags)
+            );
+        }
+        if (removed)
             RemoveAura(iter);
         else
             ++iter;
+        // @net-end
     }
 }
 
@@ -9061,7 +9077,7 @@ bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool trigg
         , TSUnit(const_cast<Unit*>(this))
         , TSWorldObject(const_cast<WorldObject*>(caster))
         , TSSpellInfo(auraSpellInfo)
-        , TSMutable<int32>(&duration)
+        , TSMutableNumber<int32>(&duration)
         , oldDuration
         , previousLevel
         , mod
@@ -12313,7 +12329,7 @@ bool Unit::CanApplyResilience() const
         return;
 
     Unit const* target = nullptr;
-    
+
     if (Unit* owner = victim->GetOwner())
         target = owner;
     else
