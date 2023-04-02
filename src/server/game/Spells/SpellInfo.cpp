@@ -1962,7 +1962,9 @@ void SpellInfo::_LoadAuraState()
             return AURA_STATE_SWIFTMEND;
 
         // Deadly poison aura state
-        if (SpellFamilyName == SPELLFAMILY_ROGUE && SpellFamilyFlags[0] & 0x10000)
+        // @net-begin: custom-config
+        if (Id == sWorld->getIntConfig(CONFIG_NET_SPELL_DEADLY_POISON_EFFECT))
+        // @net-end
             return AURA_STATE_DEADLY_POISON;
 
         // Enrage aura state

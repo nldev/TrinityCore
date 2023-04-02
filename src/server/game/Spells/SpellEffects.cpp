@@ -527,7 +527,9 @@ void Spell::EffectSchoolDMG()
                     break;
 
                 // Envenom
-                if (m_spellInfo->SpellFamilyFlags[1] & 0x00000008)
+                // @net-begin: custom-config
+                if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_POISONER))
+                // @net-end
                 {
                     if (Player* player = unitCaster->ToPlayer())
                     {
@@ -577,7 +579,9 @@ void Spell::EffectSchoolDMG()
                     }
                 }
                 // Eviscerate
-                else if (m_spellInfo->SpellFamilyFlags[0] & 0x00020000)
+                // @net-begin: custom-config
+                else if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_EVISCERATE))
+                // @net-end
                 {
                     if (Player* player = unitCaster->ToPlayer())
                     {

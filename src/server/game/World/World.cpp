@@ -1580,6 +1580,8 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_NET_SPELL_OVERKILL] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL", 0);
     m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL_EFFECT", 0);
     m_int_configs[CONFIG_NET_SPELL_MASTER_OF_SUBTLETY] = sConfigMgr->GetIntDefault("Net.Spell.CONFIG_NET_SPELL_MASTER_OF_SUBTLETY", 0);
+    m_int_configs[CONFIG_NET_SPELL_ENVENOM] = sConfigMgr->GetIntDefault("Net.Spell.CONFIG_NET_SPELL_ENVENOM", 0);
+    m_int_configs[CONFIG_NET_SPELL_DEADLY_POISON_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.CONFIG_NET_DEADLY_POISON_EFFECT", 0);
     // @net-end
 
     // call ScriptMgr if we're reloading the configuration
