@@ -4196,7 +4196,19 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except)
     {
         Aura* aura = (*iter)->GetBase();
         ++iter;
-        if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except))
+        // @net-begin: on-interrupt-aura
+        SpellInfo const* info = aura->GetSpellInfo();
+        bool removed = (info->AuraInterruptFlags & flag) && (!except || aura->GetId() != except);
+        FIRE_ID(
+            info->events.id,
+            Spell,OnInterruptAura,
+            TSSpellInfo(info),
+            TSAura(aura),
+            TSMutable<bool,bool>(&removed),
+            TSNumber<uint32>(except)
+        );
+        if (removed)
+        // @net-end
         {
             uint32 removedAuras = m_removedAurasCount;
             RemoveAura(aura);
@@ -8897,7 +8909,8 @@ void Unit::setDeathState(DeathState s)
     if (s != ALIVE && s != JUST_RESPAWNED)
     {
         CombatStop();
-        ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
+        // @net-begin: keep-combo-points-on-corpse
+        // @net-end
 
         if (IsNonMeleeSpellCast(false))
             InterruptNonMeleeSpells(false);
@@ -9017,77 +9030,17 @@ void Unit::IncrDiminishing(SpellInfo const* auraSpellInfo, bool triggered)
 
 bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool triggered, int32& duration, WorldObject* caster, DiminishingLevels previousLevel) const
 {
-    DiminishingGroup const group = auraSpellInfo->GetDiminishingReturnsGroupForSpell(triggered);
     // @net-begin: on-apply-diminishing-return-hook
-    // @net-end
-    int32 const limitDuration = auraSpellInfo->GetDiminishingReturnsLimitDuration(triggered);
-
-    // test pet/charm masters instead pets/charmeds
-    Unit const* targetOwner = GetCharmerOrOwner();
-    Unit const* casterOwner = caster->GetCharmerOrOwner();
-
-    // Duration of crowd control abilities on pvp target is limited by 10 sec. (2.2.0)
-    if (limitDuration > 0 && duration > limitDuration)
-    {
-        Unit const* target = targetOwner ? targetOwner : this;
-        WorldObject const* source = casterOwner ? casterOwner : caster;
-
-        if (target->IsAffectedByDiminishingReturns() && source->GetTypeId() == TYPEID_PLAYER)
-            duration = limitDuration;
-    }
-
-    float mod = 1.0f;
-    if (group == DIMINISHING_TAUNT)
-    {
-        if (GetTypeId() == TYPEID_UNIT && (ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_OBEYS_TAUNT_DIMINISHING_RETURNS))
-        {
-            DiminishingLevels diminish = previousLevel;
-            switch (diminish)
-            {
-                case DIMINISHING_LEVEL_1: break;
-                case DIMINISHING_LEVEL_2: mod = 0.65f; break;
-                case DIMINISHING_LEVEL_3: mod = 0.4225f; break;
-                case DIMINISHING_LEVEL_4: mod = 0.274625f; break;
-                case DIMINISHING_LEVEL_TAUNT_IMMUNE: mod = 0.0f; break;
-                default: break;
-            }
-        }
-    }
-    // Some diminishings applies to mobs too (for example, Stun)
-    else if (auraSpellInfo->GetDiminishingReturnsGroupType(triggered) == DRTYPE_ALL ||
-        (auraSpellInfo->GetDiminishingReturnsGroupType(triggered) == DRTYPE_PLAYER &&
-        (targetOwner ? targetOwner->IsAffectedByDiminishingReturns() : IsAffectedByDiminishingReturns())))
-    {
-        DiminishingLevels diminish = previousLevel;
-        switch (diminish)
-        {
-            case DIMINISHING_LEVEL_1: break;
-            case DIMINISHING_LEVEL_2: mod = 0.5f; break;
-            case DIMINISHING_LEVEL_3: mod = 0.25f; break;
-            case DIMINISHING_LEVEL_IMMUNE: mod = 0.0f; break;
-            default: break;
-        }
-    }
-
-    // @net-begin: on-apply-diminishing-return-hook
-    int32 oldDuration = duration;
-    duration = int32(duration * mod);
-
     FIRE(Unit,OnApplyDiminishingReturn
         , TSUnit(const_cast<Unit*>(this))
         , TSWorldObject(const_cast<WorldObject*>(caster))
         , TSSpellInfo(auraSpellInfo)
         , TSMutableNumber<int32>(&duration)
-        , oldDuration
-        , previousLevel
-        , mod
     );
-
-    if (duration == -1 || group == DIMINISHING_NONE)
+    if (duration == -1)
         return true;
-    // @net-end
-
     return (duration != 0);
+    // @net-end
 }
 
 void Unit::ApplyDiminishingAura(DiminishingGroup group, bool apply)

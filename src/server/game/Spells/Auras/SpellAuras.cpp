@@ -481,8 +481,10 @@ bool Aura::CanPeriodicTickCrit(Unit const* caster) const
         return true;
 
     // Rupture - since 3.3.3 can crit
-    if (GetSpellInfo()->SpellIconID == 500 && GetSpellInfo()->SpellFamilyName == SPELLFAMILY_ROGUE)
+    // @net-begin: custom-config
+    if (GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_RUPTURE))
         return true;
+    // @net-end
 
     return false;
 }
@@ -1728,11 +1730,12 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
     switch (GetSpellInfo()->SpellFamilyName)
     {
         case SPELLFAMILY_ROGUE:
+            // @net-begin: custom-config
             // Stealth
-            if (GetSpellInfo()->SpellFamilyFlags[0] & 0x00400000)
+            if (GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_STEALTH))
             {
                 // Master of subtlety
-                if (AuraEffect const* aurEff = target->GetAuraEffectOfRankedSpell(31221, 0))
+                if (AuraEffect const* aurEff = target->GetAuraEffectOfRankedSpell(sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_OF_SUBTLETY), 0))
                 {
                     if (!apply)
                         target->CastSpell(target, 31666, true);
@@ -1747,7 +1750,7 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                     }
                 }
                 // Overkill
-                if (target->HasAura(58426))
+                if (target->HasAura(sWorld->getIntConfig(CONFIG_NET_SPELL_OVERKILL)))
                 {
                     if (!apply)
                         target->CastSpell(target, 58428, true);
@@ -1756,11 +1759,12 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                         // Remove counter aura
                         target->RemoveAurasDueToSpell(58428);
 
-                        target->CastSpell(target, 58427, true);
+                        target->CastSpell(target, sWorld->getIntConfig(CONFIG_NET_SPELL_OVERKILL_EFFECT), true);
                     }
                 }
                 break;
             }
+            // @net-end
             break;
         case SPELLFAMILY_HUNTER:
             switch (GetId())

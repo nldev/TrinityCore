@@ -549,7 +549,9 @@ void Spell::EffectSchoolDMG()
                                 Unit::AuraEffectList const& auraList = player->GetAuraEffectsByType(SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL_NOT_STACK);
                                 for (Unit::AuraEffectList::const_iterator iter = auraList.begin(); iter != auraList.end(); ++iter)
                                 {
-                                    if ((*iter)->GetSpellInfo()->SpellFamilyName == SPELLFAMILY_ROGUE && (*iter)->GetSpellInfo()->SpellIconID == 1960)
+                                    // @net-begin: custom-config
+                                    if ((*iter)->GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_POISONER))
+                                    // @net-end
                                     {
                                         uint32 chance = (*iter)->GetSpellInfo()->GetEffect(EFFECT_2).CalcValue(unitCaster);
 
@@ -3187,22 +3189,19 @@ void Spell::EffectWeaponDmg()
         }
         case SPELLFAMILY_ROGUE:
         {
+            // @net-begin: custom-config
             // Fan of Knives, Hemorrhage, Ghostly Strike
-            if ((m_spellInfo->SpellFamilyFlags[1] & 0x40000)
-                || (m_spellInfo->SpellFamilyFlags[0] & 0x6000000))
+            if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_FAN_OF_KNIVES)
+                || m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_HEMORRHAGE)
+                || m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_GHOSTLY_STRIKE))
             {
                 // Hemorrhage
-                if (m_spellInfo->SpellFamilyFlags[0] & 0x2000000)
+                if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_HEMORRHAGE))
                     AddComboPointGain(unitTarget, 1);
-
-                // 50% more damage with daggers
-                if (unitCaster->GetTypeId() == TYPEID_PLAYER)
-                    if (Item* item = unitCaster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
-                        if (item->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
-                            totalDamagePercentMod *= 1.5f;
             }
             // Mutilate (for each hand)
-            else if (m_spellInfo->SpellFamilyFlags[1] & 0x6)
+            else if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MUTILATE))
+            // @net-end
             {
                 bool found = false;
                 // fast check

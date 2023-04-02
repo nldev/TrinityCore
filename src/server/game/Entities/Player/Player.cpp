@@ -1397,7 +1397,8 @@ void Player::setDeathState(DeathState s)
         // drunken state is cleared on death
         SetDrunkValue(0);
         // lost combo points at any target (targeted combo points clear in Unit::setDeathState)
-        ClearComboPoints();
+        // @net-begin: keep-combo-points-on-corpse
+        // @net-end
 
         ClearResurrectRequestData();
 
