@@ -3932,9 +3932,21 @@ void Unit::RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID, uint8 re
 {
     for (AuraApplicationMap::iterator iter = m_appliedAuras.lower_bound(spellId); iter != m_appliedAuras.upper_bound(spellId);)
     {
-        Aura const* aura = iter->second->GetBase();
-        if (((aura->GetEffectMask() & reqEffMask) == reqEffMask)
-            && (!casterGUID || aura->GetCasterGUID() == casterGUID))
+        // @net-begin: on-remove-aura
+        Aura* aura = iter->second->GetBase();
+        SpellInfo const* info = aura->GetSpellInfo();
+        bool removed = ((aura->GetEffectMask() & reqEffMask) == reqEffMask)
+            && (!casterGUID || aura->GetCasterGUID() == casterGUID);
+        FIRE_ID(
+            info->events.id,
+            Spell,OnRemoveAura,
+            TSSpellInfo(info),
+            TSAura(aura),
+            TSMutable<bool,bool>(&removed),
+            TSNumber<uint32>(spellId)
+        );
+        if (removed)
+        // @net-end
         {
             RemoveAura(iter, removeMode);
             iter = m_appliedAuras.lower_bound(spellId);
