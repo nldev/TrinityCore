@@ -3496,10 +3496,8 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
     // Fingers of Frost
-    ApplySpellFix({ 44544 }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->_GetEffect(EFFECT_0).SpellClassMask = flag96(685904631, 1151048, 0);
-    });
+    // @net-begin: fix-fingers-of-frost
+    // @net-end
 
     // Magic Suppression - DK
     ApplySpellFix({ 49224, 49610, 49611 }, [](SpellInfo* spellInfo)

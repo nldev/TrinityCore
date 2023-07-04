@@ -2094,9 +2094,10 @@ void SpellInfo::_LoadSpellSpecific()
                 if (SpellFamilyFlags[0] & 0x400)
                     return SPELL_SPECIFIC_MAGE_ARCANE_BRILLANCE;
 
-                if ((SpellFamilyFlags[0] & 0x1000000) && GetEffect(EFFECT_0).IsAura(SPELL_AURA_MOD_CONFUSE))
+                // @net-begin: custom-config
+                if ((Id == sWorld->getIntConfig(CONFIG_NET_SPELL_POLYMORPH)) && GetEffect(EFFECT_0).IsAura(SPELL_AURA_MOD_CONFUSE))
+                // @net-end
                     return SPELL_SPECIFIC_MAGE_POLYMORPH;
-
                 break;
             }
             case SPELLFAMILY_WARRIOR:
@@ -3440,13 +3441,17 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
             break;
         case SPELLFAMILY_MAGE:
             // Amplify Magic, Dampen Magic
-            if (spellInfo->SpellFamilyFlags[0] == 0x00002000)
+            // @net-begin: custom-config
+            if ((spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_AMPLIFY_MAGIC)) || (spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_DAMPEN_MAGIC)))
+            // @net-end
                 return true;
             // Permafrost (due to zero basepoint)
             if (spellInfo->SpellFamilyFlags[2] == 0x00000010)
                 return false;
             // Arcane Missiles
-            if (spellInfo->SpellFamilyFlags[0] == 0x00000800)
+            // @net-begin: custom-config
+            if ((spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_ARCANE_MISSILES)) || (spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MINOR_ARCANE_MISSILES)))
+            // @net-end
                 return false;
             break;
         case SPELLFAMILY_WARRIOR:

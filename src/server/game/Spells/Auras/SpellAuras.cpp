@@ -483,8 +483,8 @@ bool Aura::CanPeriodicTickCrit(Unit const* caster) const
     // Rupture - since 3.3.3 can crit
     // @net-begin: custom-config
     if (GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_RUPTURE))
-        return true;
     // @net-end
+        return true;
 
     return false;
 }

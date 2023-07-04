@@ -7727,7 +7727,16 @@ void Spell::PreprocessSpellLaunch(TargetInfo& targetInfo)
         , TSMutableNumber<float>(&critChance)
     );
     // @tswow-end
-    targetInfo.IsCrit = roll_chance_f(critChance);
+    // @net-begin: on-crit-hook
+    bool isCrit = roll_chance_f(critChance);
+    FIRE_ID(
+        this->m_spellInfo->events.id
+        , Spell,OnCrit
+        , TSSpell(this)
+        , TSMutable<bool,bool>(&isCrit)
+    );
+    targetInfo.IsCrit = isCrit;
+    // @net-end
 }
 
 void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, SpellEffectInfo const& spellEffectInfo)

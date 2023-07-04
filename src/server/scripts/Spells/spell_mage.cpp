@@ -29,6 +29,7 @@
 #include "SpellHistory.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "World.h"
 
 enum MageSpells
 {
@@ -849,7 +850,9 @@ class spell_mage_ignite : public AuraScript
         PreventDefaultAction();
 
         SpellInfo const* igniteDot = sSpellMgr->AssertSpellInfo(SPELL_MAGE_IGNITE);
-        int32 pct = 8 * GetSpellInfo()->GetRank();
+        // @net-begin: ignite-fix
+        int32 pct = 40;
+        // @net-end
 
         ASSERT(igniteDot->GetMaxTicks() > 0);
         int32 amount = int32(CalculatePct(eventInfo.GetDamageInfo()->GetDamage(), pct) / igniteDot->GetMaxTicks());
@@ -1034,7 +1037,9 @@ class spell_mage_missile_barrage : public AuraScript
             return false;
 
         // Arcane Blast - full chance
-        if (spellInfo->SpellFamilyFlags[0] & 0x20000000)
+        // @net-begin: custom-config
+        if (spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_ARCANE_BLAST))
+        // @net-end
             return true;
 
         // Rest of spells have half chance
