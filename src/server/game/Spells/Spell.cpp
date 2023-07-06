@@ -2702,6 +2702,20 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
     if (!unit)
         return SPELL_MISS_EVADE;
 
+    // @net-begin: on-preprocess-spell-hit
+    bool isOverride = false;
+    uint32 miss = SPELL_MISS_NONE;
+    FIRE_ID(
+        this->m_spellInfo->events.id
+        , Spell,OnPreprocessSpellHit
+        , TSSpell(this)
+        , TSMutable<bool,bool>(&isOverride)
+        , TSMutableNumber<uint32>(&miss)
+    );
+    if (isOverride)
+        return SpellMissInfo(miss);
+    // @net-end
+
     // Target may have begun evading between launch and hit phases - re-check now
     if (Creature* creatureTarget = unit->ToCreature())
         if (creatureTarget->IsEvadingAttacks())

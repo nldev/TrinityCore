@@ -3709,6 +3709,21 @@ void Unit::RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode)
 {
     Aura* aura = i->second;
     ASSERT(!aura->IsRemoved());
+    // @net-begin: on-remove-aura
+    const SpellInfo* info = aura->GetSpellInfo();
+    bool cancel = false;
+    FIRE_ID(
+        info->events.id
+        , Spell,OnRemoveOwnedAura
+        , TSAura(aura)
+        , TSMutable<bool,bool>(&cancel)
+        , aura->IsRemoved()
+        , aura->IsExpired()
+        , removeMode
+    );
+    if (cancel)
+        return;
+    // @net-end
 
     // if unit currently update aura list then make safe update iterator shift to next
     if (m_auraUpdateIterator == i)
@@ -3785,10 +3800,22 @@ Aura* Unit::GetOwnedAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemC
 void Unit::RemoveAura(AuraApplicationMap::iterator &i, AuraRemoveMode mode)
 {
     AuraApplication * aurApp = i->second;
+    // @net-begin: on-remove-aura
+    Aura* aura = aurApp->GetBase();
+    const SpellInfo* info = aura->GetSpellInfo();
+    bool cancel = false;
+    FIRE_ID(
+        info->events.id
+        , Spell,OnRemoveAuraByIterator
+        , TSAuraApplication(aurApp)
+        , TSMutable<bool,bool>(&cancel)
+    );
+    if (cancel)
+        return;
+    // @net-end
     // Do not remove aura which is already being removed
     if (aurApp->GetRemoveMode())
         return;
-    Aura* aura = aurApp->GetBase();
     _UnapplyAura(i, mode);
     // Remove aura - for Area and Target auras
     if (aura->GetOwner() == this)
@@ -3814,6 +3841,19 @@ void Unit::RemoveAura(uint32 spellId, ObjectGuid caster, uint8 reqEffMask, AuraR
 
 void Unit::RemoveAura(AuraApplication * aurApp, AuraRemoveMode mode)
 {
+    // @net-begin: on-remove-aura
+    Aura* aura = aurApp->GetBase();
+    const SpellInfo* info = aura->GetSpellInfo();
+    bool cancel = false;
+    FIRE_ID(
+        info->events.id
+        , Spell,OnRemoveAuraByApplication
+        , TSAuraApplication(aurApp)
+        , TSMutable<bool,bool>(&cancel)
+    );
+    if (cancel)
+        return;
+    // @net-end
     // we've special situation here, RemoveAura called while during aura removal
     // this kind of call is needed only when aura effect removal handler
     // or event triggered by it expects to remove
@@ -3849,6 +3889,18 @@ void Unit::RemoveAura(AuraApplication * aurApp, AuraRemoveMode mode)
 
 void Unit::RemoveAura(Aura* aura, AuraRemoveMode mode)
 {
+    // @net-begin: on-remove-aura
+    const SpellInfo* info = aura->GetSpellInfo();
+    bool cancel = false;
+    FIRE_ID(
+        info->events.id
+        , Spell,OnRemoveAura
+        , TSAura(aura)
+        , TSMutable<bool,bool>(&cancel)
+    );
+    if (cancel)
+        return;
+    // @net-end
     if (aura->IsRemoved())
         return;
     if (AuraApplication * aurApp = aura->GetApplicationOfTarget(GetGUID()))
@@ -3939,7 +3991,7 @@ void Unit::RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID, uint8 re
             && (!casterGUID || aura->GetCasterGUID() == casterGUID);
         FIRE_ID(
             info->events.id,
-            Spell,OnRemoveAura,
+            Spell,OnRemoveAuraDueToSpell,
             TSSpellInfo(info),
             TSAura(aura),
             TSMutable<bool,bool>(&removed),

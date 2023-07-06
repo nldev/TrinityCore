@@ -2166,9 +2166,28 @@ void Aura::TriggerProcOnEvent(uint8 procEffectMask, AuraApplication* aurApp, Pro
         CallScriptAfterProcHandlers(aurApp, eventInfo);
     }
 
-    // Remove aura if we've used last charge to proc
-    if (IsUsingCharges() && !GetCharges())
-        Remove();
+    // @net-begin
+    Aura* aura = aurApp->GetBase();
+    SpellInfo const* info = aura->GetSpellInfo();
+    bool cancel = false;
+    FIRE_ID(
+        info->events.id
+        , Spell,OnRemoveAuraFromCharges
+        , TSAura(aura)
+        , TSMutable<bool,bool>(&cancel)
+    );
+    if (!cancel)
+    {
+
+        // Remove aura if we've used last charge to proc
+        if (IsUsingCharges() && !GetCharges())
+            Remove();
+    }
+    else
+    {
+        m_procCharges = 1;
+    }
+    // @net-end
 }
 
 void Aura::_DeleteRemovedApplications()
