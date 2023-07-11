@@ -4085,7 +4085,9 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, W
 
             bool stealCharge = aura->GetSpellInfo()->HasAttribute(SPELL_ATTR7_DISPEL_CHARGES);
             // Cast duration to unsigned to prevent permanent aura's such as Righteous Fury being permanently added to caster
-            uint32 dur = std::min(2u * MINUTE * IN_MILLISECONDS, uint32(aura->GetDuration()));
+            // @net-begin: spellsteal-durations
+            uint32 dur = std::min(7u * 24u * 60u * MINUTE * IN_MILLISECONDS, uint32(aura->GetDuration()));
+            // @net-end
 
             if (Unit* unitStealer = stealer->ToUnit())
             {

@@ -527,57 +527,8 @@ void Spell::EffectSchoolDMG()
                     break;
 
                 // Envenom
-                // @net-begin: custom-config
-                if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_POISONER))
+                // @net-begin: scripted-envenom
                 // @net-end
-                {
-                    if (Player* player = unitCaster->ToPlayer())
-                    {
-                        // consume from stack dozes not more that have combo-points
-                        if (uint32 combo = player->GetComboPoints())
-                        {
-                            // Lookup for Deadly poison (only attacker applied)
-                            if (AuraEffect const* aurEff = unitTarget->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_ROGUE, 0x00010000, 0, 0, unitCaster->GetGUID()))
-                            {
-                                // count consumed deadly poison doses at target
-                                bool needConsume = true;
-                                uint32 spellId = aurEff->GetId();
-
-                                uint32 doses = aurEff->GetBase()->GetStackAmount();
-                                if (doses > combo)
-                                    doses = combo;
-
-                                // Master Poisoner
-                                Unit::AuraEffectList const& auraList = player->GetAuraEffectsByType(SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL_NOT_STACK);
-                                for (Unit::AuraEffectList::const_iterator iter = auraList.begin(); iter != auraList.end(); ++iter)
-                                {
-                                    // @net-begin: custom-config
-                                    if ((*iter)->GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_POISONER))
-                                    // @net-end
-                                    {
-                                        uint32 chance = (*iter)->GetSpellInfo()->GetEffect(EFFECT_2).CalcValue(unitCaster);
-
-                                        if (chance && roll_chance_i(chance))
-                                            needConsume = false;
-
-                                        break;
-                                    }
-                                }
-
-                                if (needConsume)
-                                    for (uint32 i = 0; i < doses; ++i)
-                                        unitTarget->RemoveAuraFromStack(spellId, unitCaster->GetGUID());
-
-                                damage *= doses;
-                                damage += int32(player->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * combo);
-                            }
-
-                            // Eviscerate and Envenom Bonus Damage (item set effect)
-                            if (unitCaster->HasAura(37169))
-                                damage += combo * 40;
-                        }
-                    }
-                }
                 // Eviscerate
                 // @net-begin: custom-config
                 else if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_EVISCERATE))
