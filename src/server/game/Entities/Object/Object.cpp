@@ -1749,23 +1749,19 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
         if (unit && unit->HasAuraTypeWithMiscvalue(SPELL_AURA_DETECT_STEALTH, i))
             return true;
 
-        // Starting points
-        int32 detectionValue = 30;
+        // @net-begin: on-can-detect-stealth
+        int32 detectionValue = (go ? 0 : 295) + m_stealthDetect.GetValue(StealthType(i));
+        int32 stealthValue = obj->m_stealth.GetValue((StealthType(i)));
+        if (unit)
+            FIRE(Unit,OnCanDetectStealth
+                , TSUnit(const_cast<Unit*>(unit))
+                , TSWorldObject(const_cast<WorldObject*>(obj))
+                , TSMutableNumber<int32>(&stealthValue)
+                , TSMutableNumber<int32>(&detectionValue)
+            )
+        detectionValue -= stealthValue;
+        // @net-end
 
-        // Level difference: 5 point / level, starting from level 1.
-        // There may be spells for this and the starting points too, but
-        // not in the DBCs of the client.
-        detectionValue += int32(GetLevelForTarget(obj) - 1) * 5;
-
-        // Apply modifiers
-        detectionValue += m_stealthDetect.GetValue(StealthType(i));
-        if (go)
-            if (Unit* owner = go->GetOwner())
-                detectionValue -= int32(owner->GetLevelForTarget(this) - 1) * 5;
-
-        detectionValue -= obj->m_stealth.GetValue(StealthType(i));
-
-        // Calculate max distance
         float visibilityRange = float(detectionValue) * 0.3f + combatReach;
 
         // If this unit is an NPC then player detect range doesn't apply
