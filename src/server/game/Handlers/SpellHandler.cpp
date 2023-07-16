@@ -341,13 +341,7 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     TC_LOG_DEBUG("network", "WORLD: got cast spell packet, castCount: %u, spellId: %u, castFlags: %u, data length = %u", castCount, spellId, castFlags, (uint32)recvPacket.size());
 
     // ignore for remote control state (for player case)
-    Unit* mover = GetGameClient()->GetActivelyMovedUnit();
-    if (!mover || (mover != _player && mover->GetTypeId() == TYPEID_PLAYER))
-    {
-        recvPacket.rfinish(); // prevent spam at ignore packet
-        return;
-    }
-
+    // @net-begin: usable-while-confused
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
     if (!spellInfo)
     {
@@ -355,6 +349,15 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
     }
+    Unit* mover = GetGameClient()->GetActivelyMovedUnit();
+    bool const is_vehicle = mover && (mover != _player) && (mover->GetTypeId() == TYPEID_PLAYER);
+    bool const is_usable_while_confused = !is_vehicle && spellInfo->HasAttribute(SPELL_ATTR5_USABLE_WHILE_CONFUSED);
+    if (!is_usable_while_confused && (!mover || is_vehicle))
+    {
+        recvPacket.rfinish(); // prevent spam at ignore packet
+        return;
+    }
+    // @net-end
 
     if (spellInfo->IsPassive())
     {
@@ -362,8 +365,10 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    Unit* caster = mover;
-    if (caster->GetTypeId() == TYPEID_UNIT && !caster->ToCreature()->HasSpell(spellId))
+    // @net-begin: usable-while-confused
+    Unit* caster = is_usable_while_confused ? _player : mover;
+    if (!is_usable_while_confused && (caster->GetTypeId() == TYPEID_UNIT && !caster->ToCreature()->HasSpell(spellId)))
+    // @net-end
     {
         // If the vehicle creature does not have the spell but it allows the passenger to cast own spells
         // change caster to player and let him cast
@@ -382,7 +387,9 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     HandleClientCastFlags(recvPacket, castFlags, targets);
 
     // not have spell in spellbook
-    if (caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->HasActiveSpell(spellId))
+    // @net-begin: usable-while-confused
+    if (!is_usable_while_confused && (caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->HasActiveSpell(spellId)))
+    // @net-end
     {
         bool allow = false;
 
