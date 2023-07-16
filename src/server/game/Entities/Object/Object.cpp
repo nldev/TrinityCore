@@ -1750,7 +1750,7 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
             return true;
 
         // @net-begin: on-can-detect-stealth
-        int32 detectionValue = (go ? 0 : 295) + m_stealthDetect.GetValue(StealthType(i));
+        int32 detectionValue = (go ? 0 : 325) + m_stealthDetect.GetValue(StealthType(i));
         int32 stealthValue = obj->m_stealth.GetValue((StealthType(i)));
         if (unit)
             FIRE(Unit,OnCanDetectStealth
