@@ -527,20 +527,38 @@ void Spell::EffectSchoolDMG()
                     break;
 
                 // Envenom
-                // @net-begin: scripted-envenom
+                // @net-begin: custom-config
                 if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_ENVENOM))
+                // @net-end
                 {
                     if (Player* player = unitCaster->ToPlayer())
                     {
+                        // consume from stack dozes not more that have combo-points
                         if (uint32 combo = player->GetComboPoints())
                         {
-                            // Envenom Bonus Damage (item set effect)
+                            // Lookup for Deadly poison (only attacker applied)
+                            if (AuraEffect const* aurEff = unitTarget->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_ROGUE, 0x00010000, 0, 0, unitCaster->GetGUID()))
+                            {
+                                // @net-begin: scripted-master-poisoner
+                                // @net-end
+
+                                uint32 doses = aurEff->GetBase()->GetStackAmount();
+                                if (doses > combo)
+                                    doses = combo;
+
+                                // @net-begin: scripted-master-poisoner
+                                // @net-end
+
+                                damage *= doses;
+                                damage += int32(player->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * combo);
+                            }
+
+                            // Eviscerate and Envenom Bonus Damage (item set effect)
                             if (unitCaster->HasAura(37169))
-                                damage += combo*40;
+                                damage += combo * 40;
                         }
                     }
                 }
-                // @net-end
                 // Eviscerate
                 // @net-begin: custom-config
                 if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_EVISCERATE))
@@ -553,7 +571,7 @@ void Spell::EffectSchoolDMG()
                             float ap = unitCaster->GetTotalAttackPowerValue(BASE_ATTACK);
                             damage += std::lroundf(ap * combo * 0.07f);
 
-                            // Eviscerate Bonus Damage (item set effect)
+                            // Eviscerate and Envenom Bonus Damage (item set effect)
                             if (unitCaster->HasAura(37169))
                                 damage += combo*40;
                         }
