@@ -531,7 +531,7 @@ void Spell::EffectSchoolDMG()
                 // @net-end
                 // Eviscerate
                 // @net-begin: custom-config
-                else if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_EVISCERATE))
+                if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_EVISCERATE))
                 // @net-end
                 {
                     if (Player* player = unitCaster->ToPlayer())
