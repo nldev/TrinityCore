@@ -14,7 +14,10 @@
  * You should have received a copy of the GNU General Public License along
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
+// @net-begin
+#include "TSMutable.h"
+#include "TSItem.h"
+// @net-end
 #include "Item.h"
 #include "Bag.h"
 #include "Common.h"
@@ -286,8 +289,28 @@ bool Item::Create(ObjectGuid::LowType guidlow, uint32 itemId, Player const* owne
     SetUInt32Value(ITEM_FIELD_MAXDURABILITY, itemProto->MaxDurability);
     SetUInt32Value(ITEM_FIELD_DURABILITY, itemProto->MaxDurability);
 
+    // @net-begin: on-item-create
     for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
-        SetSpellCharges(i, itemProto->Spells[i].SpellCharges);
+    {
+        int32 charges = itemProto->Spells[i].SpellCharges;
+        FIRE_ID(
+              this->GetTemplate()->events.id
+            , Item,OnSetCharges
+            , TSItem(this)
+            , TSMutableNumber<int32>(&charges)
+        )
+        SetSpellCharges(i, charges);
+    }
+    bool cancel = false;
+    FIRE_ID(
+          this->GetTemplate()->events.id
+        , Item,OnCreate
+        , TSItem(this)
+        , TSMutable<bool,bool>(&cancel)
+    )
+    if (cancel)
+        return false;
+    // @net-end
 
     SetUInt32Value(ITEM_FIELD_DURATION, itemProto->Duration);
     SetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME, 0);

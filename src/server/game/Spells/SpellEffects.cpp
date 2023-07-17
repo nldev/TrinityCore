@@ -3174,7 +3174,7 @@ void Spell::EffectWeaponDmg()
         }
         case SPELLFAMILY_ROGUE:
         {
-            // @net-begin: custom-config
+            // @net-begin: custom-config, no-bonus-for-daggers
             // Fan of Knives, Hemorrhage, Ghostly Strike
             if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_FAN_OF_KNIVES)
                 || m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_HEMORRHAGE)
