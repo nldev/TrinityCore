@@ -528,6 +528,18 @@ void Spell::EffectSchoolDMG()
 
                 // Envenom
                 // @net-begin: scripted-envenom
+                if (m_spellInfo->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_ENVENOM))
+                {
+                    if (Player* player = unitCaster->ToPlayer())
+                    {
+                        if (uint32 combo = player->GetComboPoints())
+                        {
+                            // Envenom Bonus Damage (item set effect)
+                            if (unitCaster->HasAura(37169))
+                                damage += combo*40;
+                        }
+                    }
+                }
                 // @net-end
                 // Eviscerate
                 // @net-begin: custom-config
@@ -541,7 +553,7 @@ void Spell::EffectSchoolDMG()
                             float ap = unitCaster->GetTotalAttackPowerValue(BASE_ATTACK);
                             damage += std::lroundf(ap * combo * 0.07f);
 
-                            // Eviscerate and Envenom Bonus Damage (item set effect)
+                            // Eviscerate Bonus Damage (item set effect)
                             if (unitCaster->HasAura(37169))
                                 damage += combo*40;
                         }
