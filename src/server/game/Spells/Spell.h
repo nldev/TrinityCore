@@ -145,6 +145,18 @@ enum SpellState
     SPELL_STATE_DELAYED   = 5
 };
 
+// @net-begin: spell-batching
+enum SpellBatchGroup : uint32
+{
+    SPELL_BATCH_IMMEDIATE = 0,
+    SPELL_BATCH_EARLIEST = 1,
+    SPELL_BATCH_EARLY = 2,
+    SPELL_BATCH_NORMAL = 3,
+    SPELL_BATCH_LATE = 4,
+    SPELL_BATCH_LATEST = 5,
+};
+// @net-end
+
 enum SpellEffectHandleMode
 {
     SPELL_EFFECT_HANDLE_LAUNCH,
@@ -475,6 +487,13 @@ class TC_GAME_API Spell
 
         std::string GetDebugInfo() const;
         void CallScriptOnResistAbsorbCalculateHandlers(DamageInfo const& damageInfo, uint32& resistAmount, int32& absorbAmount);
+        // @net-begin: spell-batching
+        void CompleteBatch();
+        bool IsBatchCompleted();
+        void SkipBatch();
+        SpellBatchGroup GetBatchGroup() const { return m_batchGroup; };
+        uint32 GetBatchSkips() const { return m_batchSkips; };
+        // @net-end
 
     protected:
         bool HasGlobalCooldown() const;
@@ -701,6 +720,13 @@ class TC_GAME_API Spell
         // @tswow-end
         // -------------------------------------------
 
+        // @net-begin: spell-batching
+        SpellBatchGroup m_batchGroup;
+        uint8 m_batchSkips;
+        bool m_is_batch_completed = false;
+        bool m_isDelayed = false;
+        uint32 m_batchTime = 0;
+        // @net-end
         uint32 m_spellState;
         int32 m_timer;
 

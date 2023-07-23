@@ -45,6 +45,9 @@
 #include "TSWorldEntity.h"
 #include <sol/sol.hpp>
 // @tswow-end
+// @net-begin: spell-batching
+#include "ActionBatch.h"
+// @net-end
 
 class Battleground;
 class BattlegroundMap;
@@ -665,6 +668,11 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         }
 
         virtual std::string GetDebugInfo() const;
+        // @net-begin: spell-batching
+        uint32 const GetBatchTime();
+        // void AddPacketBatchAction(WorldPacket& packet, WorldSession* session);
+        void BatchSpell(Spell* spell);
+        // @net-end
 
     private:
         void LoadMapAndVMap(int gx, int gy);
@@ -922,6 +930,11 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         std::unordered_set<Object*> _updateObjects;
 
         MPSCQueue<FarSpellCallback> _farSpellCallbacks;
+        // @net-begin: spell-batching
+        TimeTracker batchTimer;
+        ActionBatch* actionBatch;
+        uint32 m_batchTime;
+        // @net-end
 };
 
 enum InstanceResetMethod
