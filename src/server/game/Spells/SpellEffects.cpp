@@ -1752,18 +1752,6 @@ void Spell::EffectEnergize()
     switch (m_spellInfo->Id)
     {
         // @net-begin: flatten-level-scaling
-        case 9512:                                          // Restore Energy
-            level_diff = 60 - 40;
-            level_multiplier = 2;
-            break;
-        case 24571:                                         // Blood Fury
-            level_diff = 0;
-            level_multiplier = 10;
-            break;
-        case 24532:                                         // Burst of Energy
-            level_diff = 0;
-            level_multiplier = 4;
-            break;
         // @net-end
         case 31930:                                         // Judgements of the Wise
         case 63375:                                         // Improved Stormstrike
