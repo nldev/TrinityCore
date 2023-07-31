@@ -1579,7 +1579,6 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_NET_SPELL_EVISCERATE] = sConfigMgr->GetIntDefault("Net.Spell.EVISCERATE", 0);
     m_int_configs[CONFIG_NET_SPELL_OVERKILL] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL", 0);
     m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL_EFFECT", 0);
-    m_int_configs[CONFIG_NET_SPELL_MASTER_OF_SUBTLETY] = sConfigMgr->GetIntDefault("Net.Spell.MASTER_OF_SUBTLETY", 0);
     m_int_configs[CONFIG_NET_SPELL_ENVENOM] = sConfigMgr->GetIntDefault("Net.Spell.ENVENOM", 0);
     m_int_configs[CONFIG_NET_SPELL_DEADLY_POISON_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.DEADLY_POISON_EFFECT", 0);
     m_int_configs[CONFIG_NET_SPELL_ARCANE_BLAST] = sConfigMgr->GetIntDefault("Net.Spell.ARCANE_BLAST", 0);

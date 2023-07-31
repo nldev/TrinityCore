@@ -1730,12 +1730,13 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
     switch (GetSpellInfo()->SpellFamilyName)
     {
         case SPELLFAMILY_ROGUE:
-            // @net-begin: custom-config
             // Stealth
+            // @net-begin: custom-config
             if (GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_STEALTH))
+            // @net-end
             {
                 // Master of subtlety
-                if (AuraEffect const* aurEff = target->GetAuraEffectOfRankedSpell(sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_OF_SUBTLETY), 0))
+                if (AuraEffect const* aurEff = target->GetAuraEffectOfRankedSpell(31221, 0))
                 {
                     if (!apply)
                         target->CastSpell(target, 31666, true);
@@ -1750,7 +1751,9 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                     }
                 }
                 // Overkill
+                // @net-begin: custom-config
                 if (target->HasAura(sWorld->getIntConfig(CONFIG_NET_SPELL_OVERKILL)))
+                // @net-end
                 {
                     if (!apply)
                         target->CastSpell(target, 58428, true);
@@ -1759,12 +1762,13 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                         // Remove counter aura
                         target->RemoveAurasDueToSpell(58428);
 
+                        // @net-begin: custom-config
                         target->CastSpell(target, sWorld->getIntConfig(CONFIG_NET_SPELL_OVERKILL_EFFECT), true);
+                        // @net-end
                     }
                 }
                 break;
             }
-            // @net-end
             break;
         case SPELLFAMILY_HUNTER:
             switch (GetId())
