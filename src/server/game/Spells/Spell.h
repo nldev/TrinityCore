@@ -482,6 +482,9 @@ class TC_GAME_API Spell
         void CleanupTargetList();
 
         void SetSpellValue(SpellValueMod mod, int32 value);
+        // @net-begin: spell-editor
+        int32 GetSpellValue(SpellValueMod mod) { return m_spellValue->EffectBasePoints[mod]; }
+        // @net-end
 
         Spell** m_selfContainer;                            // pointer to our spell container (if applicable)
 

@@ -3302,6 +3302,25 @@ void Spell::_cast(bool skipCheck)
         cancel();
         return;
     }
+    // @net-begin: spell-editor
+    int32 bp0 = GetSpellValue(SPELLVALUE_BASE_POINT0);
+    int32 bp1 = GetSpellValue(SPELLVALUE_BASE_POINT1);
+    int32 bp2 = GetSpellValue(SPELLVALUE_BASE_POINT2);
+    FIRE_ID(
+        m_spellInfo->events.id
+        , Spell,OnCalcPoints
+        , TSSpell(this)
+        , TSMutableNumber<int32>(&bp0)
+        , TSMutableNumber<int32>(&bp1)
+        , TSMutableNumber<int32>(&bp2)
+    )
+    if (bp0 != 0)
+        SetSpellValue(SPELLVALUE_BASE_POINT0, bp0);
+    if (bp1 != 0)
+        SetSpellValue(SPELLVALUE_BASE_POINT1, bp1);
+    if (bp2 != 0)
+        SetSpellValue(SPELLVALUE_BASE_POINT2, bp2);
+    // @net-end
 
     if (Player* playerCaster = m_caster->ToPlayer())
     {
