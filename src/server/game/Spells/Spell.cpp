@@ -598,7 +598,7 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
 
     // @net-begin: allow-gobject-reflect
     // Determine if spell can be reflected back to the caster
-    m_canReflect = (caster->isType(TYPEMASK_GAMEOBJECT) || caster->isType(TYPEMASK_UNIT)) && m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC
+    m_canReflect = m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC
         && !m_spellInfo->HasAttribute(SPELL_ATTR1_CANT_BE_REFLECTED) && !m_spellInfo->HasAttribute(SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY)
         && !m_spellInfo->IsPassive();
     // @net-end
@@ -2157,12 +2157,20 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     if (targetInfo.MissCondition == SPELL_MISS_REFLECT)
     {
         // @net-begin: allow-gobject-reflect
-        Unit* unitCaster = m_caster->IsUnit() ? m_caster->ToUnit() : m_caster->GetOwner();
-        targetInfo.ReflectResult = unitCaster->SpellHitResult(unitCaster, m_spellInfo, true); // can't reflect twice
-        // @net-end
+        if (m_caster->IsUnit() || m_caster->GetOwner())
+        {
+            Unit* unitCaster = (m_caster->IsGameObject() && m_caster->GetOwnerGUID() && m_caster->GetOwner()->IsUnit())
+              ? m_caster->GetOwner()->ToUnit()
+              : m_caster->ToUnit();
+            targetInfo.ReflectResult = unitCaster->SpellHitResult(unitCaster, m_spellInfo, true); // can't reflect twice
+        }
 
         // Proc spell reflect aura when missile hits the original target
-        target->m_Events.AddEvent(new ProcReflectDelayed(target, m_originalCasterGUID), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
+        ObjectGuid guid = (m_caster->IsGameObject() && m_caster->GetOwnerGUID() && m_caster->GetOwner()->IsUnit())
+            ? m_caster->GetOwnerGUID()
+            : m_caster->GetGUID();
+        target->m_Events.AddEvent(new ProcReflectDelayed(target, guid), target->m_Events.CalculateTime(Milliseconds(targetInfo.TimeDelay)));
+        // @net-end
 
         // Increase time interval for reflected spells by 1.5
         targetInfo.TimeDelay += targetInfo.TimeDelay >> 1;
@@ -2330,7 +2338,9 @@ void Spell::TargetInfo::PreprocessTarget(Spell* spell)
     if (MissCondition == SPELL_MISS_NONE || (MissCondition == SPELL_MISS_BLOCK && !spell->GetSpellInfo()->HasAttribute(SPELL_ATTR3_COMPLETELY_BLOCKED)))
         _spellHitTarget = unit;
     else if (MissCondition == SPELL_MISS_REFLECT && ReflectResult == SPELL_MISS_NONE)
-        _spellHitTarget = spell->m_caster->ToUnit();
+        _spellHitTarget = (spell->m_caster->IsGameObject() && spell->m_caster->GetOwnerGUID() && spell->m_caster->GetOwner()->IsUnit())
+              ? spell->m_caster->GetOwner()->ToUnit()
+              : spell->m_caster->ToUnit();
 
     if (spell->m_originalCaster && MissCondition != SPELL_MISS_EVADE && !spell->m_originalCaster->IsFriendlyTo(unit) && (!spell->m_spellInfo->IsPositive() || spell->m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (spell->m_spellInfo->HasInitialAggro() || unit->IsEngaged()))
         unit->SetInCombatWith(spell->m_originalCaster);
@@ -3303,23 +3313,23 @@ void Spell::_cast(bool skipCheck)
         return;
     }
     // @net-begin: spell-editor
-    int32 bp0 = GetSpellValue(SPELLVALUE_BASE_POINT0);
-    int32 bp1 = GetSpellValue(SPELLVALUE_BASE_POINT1);
-    int32 bp2 = GetSpellValue(SPELLVALUE_BASE_POINT2);
-    FIRE_ID(
-        m_spellInfo->events.id
-        , Spell,OnCalcPoints
-        , TSSpell(this)
-        , TSMutableNumber<int32>(&bp0)
-        , TSMutableNumber<int32>(&bp1)
-        , TSMutableNumber<int32>(&bp2)
-    )
-    if (bp0 != 0)
-        SetSpellValue(SPELLVALUE_BASE_POINT0, bp0);
-    if (bp1 != 0)
-        SetSpellValue(SPELLVALUE_BASE_POINT1, bp1);
-    if (bp2 != 0)
-        SetSpellValue(SPELLVALUE_BASE_POINT2, bp2);
+    // int32 bp0 = GetSpellValue(SPELLVALUE_BASE_POINT0);
+    // int32 bp1 = GetSpellValue(SPELLVALUE_BASE_POINT1);
+    // int32 bp2 = GetSpellValue(SPELLVALUE_BASE_POINT2);
+    // FIRE_ID(
+    //     m_spellInfo->events.id
+    //     , Spell,OnCalcPoints
+    //     , TSSpell(this)
+    //     , TSMutableNumber<int32>(&bp0)
+    //     , TSMutableNumber<int32>(&bp1)
+    //     , TSMutableNumber<int32>(&bp2)
+    // )
+    // if (bp0 != 0)
+    //     SetSpellValue(SPELLVALUE_BASE_POINT0, bp0);
+    // if (bp1 != 0)
+    //     SetSpellValue(SPELLVALUE_BASE_POINT1, bp1);
+    // if (bp2 != 0)
+    //     SetSpellValue(SPELLVALUE_BASE_POINT2, bp2);
     // @net-end
 
     if (Player* playerCaster = m_caster->ToPlayer())
@@ -7791,7 +7801,9 @@ void Spell::PreprocessSpellLaunch(TargetInfo& targetInfo)
         unit = targetUnit;
     // In case spell reflect from target, do all effect on caster (if hit)
     else if (targetInfo.MissCondition == SPELL_MISS_REFLECT && targetInfo.ReflectResult == SPELL_MISS_NONE)
-        unit = m_caster->ToUnit();
+        unit = (m_caster->IsGameObject() && m_caster->GetOwnerGUID() && m_caster->GetOwner()->IsUnit())
+              ? m_caster->GetOwner()->ToUnit()
+              : m_caster->ToUnit();
 
     if (!unit)
         return;
@@ -7832,7 +7844,9 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, Spe
         unit = m_caster->GetGUID() == targetInfo.TargetGUID ? m_caster->ToUnit() : ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID);
     // In case spell reflect from target, do all effect on caster (if hit)
     else if (targetInfo.MissCondition == SPELL_MISS_REFLECT && targetInfo.ReflectResult == SPELL_MISS_NONE)
-        unit = m_caster->ToUnit();
+        unit = (m_caster->IsGameObject() && m_caster->GetOwnerGUID() && m_caster->GetOwner()->IsUnit())
+            ? m_caster->GetOwner()->ToUnit()
+            : m_caster->ToUnit();
 
     if (!unit)
         return;

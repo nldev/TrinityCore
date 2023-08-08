@@ -5362,22 +5362,21 @@ float Player::GetMeleeCritFromAgility() const
 
 // @tswow-begin move dodge_base/crit_to_doge values to global scope and remove const
 // Table for base dodge values
-// @net-begin: stats-rework
 float dodge_base[MAX_CLASSES] =
 {
-     0.01f, // Warrior
-     0.01f, // Paladin
-     0.01f, // Hunter
-     0.01f, // Rogue
-     0.01f, // Priest
-     0.01f, // DK
-     0.01f, // Shaman
-     0.01f, // Mage
-     0.01f, // Warlock
-     0.0f,   // ??
-     0.01f, // Druid
+    0.036640f, // Warrior
+    0.034943f, // Paladin
+   -0.040873f, // Hunter
+    0.020957f, // Rogue
+    0.034178f, // Priest
+    0.036640f, // DK
+    0.021080f, // Shaman
+    0.036587f, // Mage
+    0.024211f, // Warlock
+    0.0f,      // ??
+    0.056097f,  // Druid
 
-     // default values for custom classes
+    // default values for custom classes
     .035f,.035f,.035f,.035f,.035f,.035f,.035f,
     .035f,.035f,.035f,.035f,.035f,.035f,.035f,
     .035f,.035f,.035f,.035f,.035f,.035f,.035f,
@@ -5385,24 +5384,23 @@ float dodge_base[MAX_CLASSES] =
 // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
 float crit_to_dodge[MAX_CLASSES] =
 {
-     1.00f/1.15f,    // Warrior
+     0.85f/1.15f,    // Warrior
      1.00f/1.15f,    // Paladin
-     1.00f/1.15f,    // Hunter
-     1.00f/1.15f,    // Rogue
+     1.11f/1.15f,    // Hunter
+     2.00f/1.15f,    // Rogue
      1.00f/1.15f,    // Priest
-     1.00f/1.15f,    // DK
-     1.00f/1.15f,    // Shaman
+     0.85f/1.15f,    // DK
+     1.60f/1.15f,    // Shaman
      1.00f/1.15f,    // Mage
-     1.00f/1.15f,    // Warlock (?)
+     0.97f/1.15f,    // Warlock (?)
      0.0f,           // ??
-     1.00f/1.15f,    // Druid
+     2.00f/1.15f,    // Druid
 
      // default values for custom classes
      .87f,.87f,.87f,.87f,.87f,.87f,.87f,
      .87f,.87f,.87f,.87f,.87f,.87f,.87f,
      .87f,.87f,.87f,.87f,.87f,.87f,.87f,
 };
-// @net-end
 void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) const
 {
 // @tswow-end
@@ -23438,9 +23436,7 @@ void Player::LearnDefaultSkill(uint32 skillId, uint16 rank)
     switch (GetSkillRangeType(rcInfo))
     {
         case SKILL_RANGE_LANGUAGE:
-            // @net-begin: no-language-levels
-            SetSkill(skillId, 0, 1, 1);
-            // @net-end
+            SetSkill(skillId, 0, 300, 300);
             break;
         case SKILL_RANGE_LEVEL:
         {
@@ -25433,7 +25429,7 @@ void Player::_LoadSkills(PreparedQueryResult result)
             switch (GetSkillRangeType(rcEntry))
             {
                 case SKILL_RANGE_LANGUAGE:                      // 300..300
-                    value = max = 1;
+                    value = max = 300;
                     break;
                 case SKILL_RANGE_MONO:                          // 1..1, grey monolite bar
                     value = max = 1;

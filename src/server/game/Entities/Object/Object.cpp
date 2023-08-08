@@ -2639,8 +2639,10 @@ SpellMissInfo WorldObject::SpellHitResult(Unit* victim, SpellInfo const* spellIn
             , TSUnit(victim)
         );
         // @tswow-end
-        if (reflectchance > 0 && roll_chance_i(reflectchance))
+        // @net-begin: allow-gobject-reflect
+        if (reflectchance > 0 && (roll_chance_i(reflectchance) || (reflectchance >= 100)))
             return SPELL_MISS_REFLECT;
+        // @net-end
     }
 
     if (spellInfo->HasAttribute(SPELL_ATTR3_IGNORE_HIT_RESULT))

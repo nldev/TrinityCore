@@ -1061,9 +1061,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
                         critPctDamageMod += victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE);
 
                     // Increase crit damage from SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
-                    // @net-begin: stats-rework
-                    critPctDamageMod += GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS);
-                    // @net-end
+                    critPctDamageMod += (GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, spellInfo->GetSchoolMask()) - 1.0f) * 100;
 
                     // Increase crit damage from SPELL_AURA_MOD_CRIT_PERCENT_VERSUS
                     critPctDamageMod += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, crTypeMask);
@@ -1698,8 +1696,6 @@ void Unit::HandleEmoteCommand(Emote emoteId)
     // @net-begin: flatten-level-scaling
     float levelModifier = 60;
     // @net-end
-    if (levelModifier > 59.f)
-        levelModifier = levelModifier + 4.5f * (levelModifier - 59.f);
 
     float damageReduction = 0.1f * armor / (8.5f * levelModifier + 40.f);
     damageReduction /= (1.0f + damageReduction);
@@ -9097,11 +9093,13 @@ void Unit::IncrDiminishing(SpellInfo const* auraSpellInfo, bool triggered)
 bool Unit::ApplyDiminishingToDuration(SpellInfo const* auraSpellInfo, bool triggered, int32& duration, WorldObject* caster, DiminishingLevels previousLevel) const
 {
     // @net-begin: on-apply-diminishing-return-hook
+    int32 limitedDuration = auraSpellInfo->GetDiminishingReturnsLimitDuration(triggered);
     FIRE(Unit,OnApplyDiminishingReturn
         , TSUnit(const_cast<Unit*>(this))
         , TSWorldObject(const_cast<WorldObject*>(caster))
         , TSSpellInfo(auraSpellInfo)
         , TSMutableNumber<int32>(&duration)
+        , limitedDuration
     );
     if (duration == -1)
         return true;
@@ -12368,8 +12366,7 @@ bool Unit::CanApplyResilience() const
             {
                 if (isCrit)
                     *damage -= target->GetMeleeCritDamageReduction(*damage);
-                // @net-begin: stats-rework
-                // @net-end
+                *damage -= target->GetMeleeDamageReduction(*damage);
             }
             break;
         case CR_CRIT_TAKEN_RANGED:
@@ -12380,8 +12377,7 @@ bool Unit::CanApplyResilience() const
             {
                 if (isCrit)
                     *damage -= target->GetRangedCritDamageReduction(*damage);
-                // @net-begin: stats-rework
-                // @net-end
+                *damage -= target->GetRangedDamageReduction(*damage);
             }
             break;
         case CR_CRIT_TAKEN_SPELL:
@@ -12392,8 +12388,7 @@ bool Unit::CanApplyResilience() const
             {
                 if (isCrit)
                     *damage -= target->GetSpellCritDamageReduction(*damage);
-                // @net-begin: stats-rework
-                // @net-end
+                *damage -= target->GetSpellDamageReduction(*damage);
             }
             break;
         default:
@@ -12545,9 +12540,7 @@ float Unit::GetCombatRatingReduction(CombatRating cr) const
 
 uint32 Unit::GetCombatRatingDamageReduction(CombatRating cr, float rate, float cap, uint32 damage) const
 {
-    // @net-begin: stats-rework
-    float percent = GetCombatRatingReduction(cr) * rate;
-    // @net-end
+    float percent = std::min(GetCombatRatingReduction(cr) * rate, cap);
     return CalculatePct(damage, percent);
 }
 
