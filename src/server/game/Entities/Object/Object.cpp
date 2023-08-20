@@ -1728,6 +1728,18 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
     if (unit)
         combatReach = unit->GetCombatReach();
 
+    // @net-begin: on-can-detect-stealth
+    bool isCancel = false;
+    if (unit)
+        FIRE(Unit,OnCancelStealthDetection
+            , TSUnit(const_cast<Unit*>(unit))
+            , TSWorldObject(const_cast<WorldObject*>(obj))
+            , TSMutable<bool,bool>(&isCancel)
+        )
+    if (isCancel)
+        return false;
+    // @net-end
+
     if (distance < combatReach)
         return true;
 

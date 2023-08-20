@@ -352,7 +352,8 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     Unit* mover = GetGameClient()->GetActivelyMovedUnit();
     bool const is_vehicle = mover && (mover != _player) && (mover->GetTypeId() == TYPEID_PLAYER);
     bool const is_usable_while_confused = !is_vehicle && spellInfo->HasAttribute(SPELL_ATTR5_USABLE_WHILE_CONFUSED);
-    if (!is_usable_while_confused && (!mover || is_vehicle))
+    bool const is_usable_while_feared = !is_vehicle && spellInfo->HasAttribute(SPELL_ATTR5_USABLE_WHILE_FEARED);
+    if (!is_usable_while_confused && !is_usable_while_feared && (!mover || is_vehicle))
     {
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
@@ -366,8 +367,8 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     }
 
     // @net-begin: usable-while-confused
-    Unit* caster = is_usable_while_confused ? _player : mover;
-    if (!is_usable_while_confused && (caster->GetTypeId() == TYPEID_UNIT && !caster->ToCreature()->HasSpell(spellId)))
+    Unit* caster = (is_usable_while_confused || is_usable_while_feared) ? _player : mover;
+    if (!is_usable_while_confused && !is_usable_while_feared && (caster->GetTypeId() == TYPEID_UNIT && !caster->ToCreature()->HasSpell(spellId)))
     // @net-end
     {
         // If the vehicle creature does not have the spell but it allows the passenger to cast own spells
@@ -380,7 +381,6 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 
         caster = _player;
     }
-
     // client provided targets
     SpellCastTargets targets;
     targets.Read(recvPacket, caster);
@@ -388,7 +388,7 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 
     // not have spell in spellbook
     // @net-begin: usable-while-confused
-    if (!is_usable_while_confused && (caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->HasActiveSpell(spellId)))
+    if (!is_usable_while_feared && !is_usable_while_confused && (caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->HasActiveSpell(spellId)))
     // @net-end
     {
         bool allow = false;
