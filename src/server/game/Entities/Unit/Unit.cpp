@@ -991,7 +991,9 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     }
 
     // make player victims stand up automatically
-    if (victim->GetStandState() && victim->IsPlayer())
+    // @net-begin: fix-stand-from-dot
+    if (victim->GetStandState() && victim->IsPlayer() && (damagetype != 2))
+    // @net-end
         victim->SetStandState(UNIT_STAND_STATE_STAND);
 
     return damage;
