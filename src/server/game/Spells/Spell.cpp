@@ -3615,9 +3615,7 @@ void Spell::_cast(bool skipCheck)
 
     // @net-begin: spell-batching
     if (!IsBatchCompleted())
-    {
         GetCaster()->GetMap()->BatchSpell(this);
-    }
     // @net-end
 }
 
@@ -7970,6 +7968,7 @@ void Spell::SetSpellValue(SpellValueMod mod, int32 value)
 {
     switch (mod)
     {
+        // @net-begin: spell-editor FIXME: implement hook here
         case SPELLVALUE_BASE_POINT0:
             m_spellValue->EffectBasePoints[0] = m_spellInfo->GetEffect(EFFECT_0).CalcBaseValue(value);
             break;

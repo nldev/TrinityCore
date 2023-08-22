@@ -542,33 +542,15 @@ void Spell::EffectSchoolDMG()
                             // @net-end
                             {
                                 // count consumed deadly poison doses at target
-                                bool needConsume = true;
-                                uint32 spellId = aurEff->GetId();
-
+                                // bool needConsume = true;
+                                // uint32 spellId = aurEff->GetId();
+                                //
                                 uint32 doses = aurEff->GetBase()->GetStackAmount();
                                 if (doses > combo)
                                     doses = combo;
 
-                                // Master Poisoner
-                                Unit::AuraEffectList const& auraList = player->GetAuraEffectsByType(SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL_NOT_STACK);
-                                for (Unit::AuraEffectList::const_iterator iter = auraList.begin(); iter != auraList.end(); ++iter)
-                                {
-                                    // @net-begin: custom-config
-                                    if ((*iter)->GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_MASTER_POISONER))
-                                    // @net-end
-                                    {
-                                        uint32 chance = (*iter)->GetSpellInfo()->GetEffect(EFFECT_2).CalcValue(unitCaster);
-
-                                        if (chance && roll_chance_i(chance))
-                                            needConsume = false;
-
-                                        break;
-                                    }
-                                }
-
-                                if (needConsume)
-                                    for (uint32 i = 0; i < doses; ++i)
-                                        unitTarget->RemoveAuraFromStack(spellId, unitCaster->GetGUID());
+                                // @net-begin: envenom-changes
+                                // @net-end
 
                                 damage *= doses;
                                 damage += int32(player->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * combo);
