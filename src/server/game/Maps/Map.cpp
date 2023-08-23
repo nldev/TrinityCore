@@ -104,9 +104,6 @@ Map::~Map()
         sMapMgr->DecreaseScheduledScriptCount(m_scriptSchedule.size());
 
     MMAP::MMapFactory::createOrGetMMapManager()->unloadMapInstance(GetId(), i_InstanceId);
-    // @net-begin: spell-batching
-    delete actionBatch;
-    // @net-end
 }
 
 bool Map::ExistMap(uint32 mapid, int gx, int gy)
@@ -286,11 +283,10 @@ m_unloadTimer(0), m_VisibleDistance(DEFAULT_VISIBILITY_DISTANCE),
 m_VisibilityNotifyPeriod(DEFAULT_VISIBILITY_NOTIFY_PERIOD),
 m_activeNonPlayersIter(m_activeNonPlayers.end()), _transportsUpdateIter(_transports.end()),
 i_gridExpiry(expiry),
-i_scriptLock(false), _respawnCheckTimer(0)
+// @net-begin: spell-batching
+i_scriptLock(false), _respawnCheckTimer(0), m_batchPeriod(sWorld->GetBatchPeriod())
+// @net-end
 {
-    // @net-begin: spell-batching
-    actionBatch = new ActionBatch();
-    // @net-end
     m_parentMap = (_parent ? _parent : this);
     for (unsigned int idx=0; idx < MAX_NUMBER_OF_GRIDS; ++idx)
     {
@@ -819,6 +815,13 @@ void Map::Update(uint32 t_diff)
     else
         _respawnCheckTimer -= t_diff;
 
+    // @net-begin
+    if (m_batchPeriod <= t_diff)
+        m_batchPeriod = sWorld->GetBatchPeriod();
+    else
+        m_batchPeriod -= t_diff;
+    // @net-end
+
     /// update active cells around players and active objects
     resetMarkedCells();
 
@@ -961,17 +964,6 @@ void Map::Update(uint32 t_diff)
         ZoneScopedNC("ScriptMgr::OnMapUpdate", MAP_UPDATE_COLOR)
         sScriptMgr->OnMapUpdate(this, t_diff);
     }
-
-    // @net-begin: spell-batching
-    batchTimer.Update(int32(t_diff));
-    if (batchTimer.Passed())
-    {
-        m_batchTime = getMSTime();
-        actionBatch->Process();
-        uint32 const interval = (sWorld->GetBatchInterval() <= 0) ? 1000 : sWorld->GetBatchInterval();
-        batchTimer.Reset(interval);
-    }
-    // @net-end
 
     TC_METRIC_VALUE("map_creatures", uint64(GetObjectsStore().Size<Creature>()),
         TC_METRIC_TAG("map_id", std::to_string(GetId())),
@@ -4946,15 +4938,3 @@ std::string InstanceMap::GetDebugInfo() const
         << "ScriptId: " << GetScriptId() << " ScriptName: " << GetScriptName();
     return sstr.str();
 }
-
-// @net-begin: spell-batching
-uint32 const Map::GetBatchTime()
-{
-    return m_batchTime;
-}
-
-void Map::BatchSpell(Spell* spell)
-{
-    actionBatch->AddSpell(spell);
-}
-// @net-end

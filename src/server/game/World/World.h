@@ -795,8 +795,8 @@ class TC_GAME_API World
         bool IsGuidWarning() { return _guidWarn; }
         bool IsGuidAlert() { return _guidAlert; }
         // @net-begin: spell-batching
-        uint32 GetBatchInterval() { return m_batchInterval; }
-        void SetBatchInterval(uint32 interval) { m_batchInterval = interval; }
+        uint32 GetBatchPeriod() { return m_batchPeriod; }
+        void SetBatchPeriod(uint32 interval) { m_batchPeriod = interval; }
         // @net-end
 
     protected:
@@ -914,7 +914,7 @@ class TC_GAME_API World
         time_t _warnShutdownTime;
 
         // @net-begin: spell-batching
-        uint32 m_batchInterval = 0;
+        uint32 m_batchPeriod = 150;
         // @net-end
 
     friend class debug_commandscript;

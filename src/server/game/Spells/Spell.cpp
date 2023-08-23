@@ -2136,21 +2136,31 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
 
     // Spell have speed - need calculate incoming time
     // Incoming time is zero for self casts. At least I think so.
-    if (m_spellInfo->Speed > 0.0f && m_caster != target)
+    // @net-begin: spell-batching
+    if (m_caster != target)
     {
-        // calculate spell incoming interval
-        /// @todo this is a hack
-        float dist = m_caster->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
+        if (m_spellInfo->Speed > 0.0f)
+        {
+            // calculate spell incoming interval
+            /// @todo this is a hack
+            float dist = m_caster->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
 
-        if (dist < 5.0f)
-            dist = 5.0f;
-        targetInfo.TimeDelay = uint64(std::floor(dist / m_spellInfo->Speed * 1000.0f));
+            if (dist < 5.0f)
+                dist = 5.0f;
+            targetInfo.TimeDelay = uint64(std::floor(dist / m_spellInfo->Speed * 1000.0f));
 
-        // Calculate minimum incoming time
-        if (!m_delayMoment || m_delayMoment > targetInfo.TimeDelay)
-            m_delayMoment = targetInfo.TimeDelay;
+            // Calculate minimum incoming time
+            if (!m_delayMoment || m_delayMoment > targetInfo.TimeDelay)
+                m_delayMoment = targetInfo.TimeDelay;
+        }
+        else
+        {
+            if (!m_spellInfo->IsChanneled())
+                m_delayMoment = caster->GetMap()->GetBatchPeriod();
+        }
     }
     else
+    // @net-end
         targetInfo.TimeDelay = 0ULL;
 
     // If target reflect spell back to caster
@@ -2732,7 +2742,9 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
             return SPELL_MISS_EVADE;
 
     // For delayed spells immunity may be applied between missile launch and hit - check immunity for that case
-    if (m_spellInfo->Speed && unit->IsImmunedToSpell(m_spellInfo, m_caster))
+    // @net-begin: spell-batching
+    if (m_delayMoment && unit->IsImmunedToSpell(m_spellInfo, m_caster))
+    // @net-end
         return SPELL_MISS_IMMUNE;
 
     if (Player* player = unit->ToPlayer())
@@ -2751,7 +2763,9 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
     if (m_caster != unit)
     {
         // Recheck  UNIT_FLAG_NON_ATTACKABLE for delayed spells
-        if (m_spellInfo->Speed > 0.0f && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) && unit->GetCharmerOrOwnerGUID() != m_caster->GetGUID())
+        // @net-begin: spell-batching
+        if (m_delayMoment && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) && unit->GetCharmerOrOwnerGUID() != m_caster->GetGUID())
+        // @net-end
             return SPELL_MISS_EVADE;
 
         if (m_caster->IsValidAttackTarget(unit, m_spellInfo))
@@ -2759,7 +2773,9 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         else if (m_caster->IsFriendlyTo(unit))
         {
             // for delayed spells ignore negative spells (after duel end) for friendly targets
-            if (m_spellInfo->Speed > 0.0f && unit->GetTypeId() == TYPEID_PLAYER && !IsPositive() && !m_caster->IsValidAssistTarget(unit, m_spellInfo))
+            // @net-begin: spell-batching
+            if (m_delayMoment && unit->GetTypeId() == TYPEID_PLAYER && !IsPositive() && !m_caster->IsValidAssistTarget(unit, m_spellInfo))
+            // @net-end
                 return SPELL_MISS_EVADE;
 
             // assisting case, healing and resurrection
@@ -3294,10 +3310,6 @@ void Spell::cast(bool skipCheck)
 
 void Spell::_cast(bool skipCheck)
 {
-    // @net-begin: spell-batching
-    if (!IsBatchCompleted())
-        return;
-    // @net-end
     // update pointers base at GUIDs to prevent access to non-existed already object
     if (!UpdatePointers())
     {
@@ -3507,31 +3519,10 @@ void Spell::_cast(bool skipCheck)
         if (Creature* creatureCaster = m_caster->ToCreature())
             creatureCaster->ReleaseSpellFocus(this);
 
-    // @net-begin: spell-batching
-    uint32 batchInterval = sWorld->GetBatchInterval();
-    if (batchInterval > 0)
-    {
-        uint32 batchGroup = uint32(SPELL_BATCH_IMMEDIATE);
-        uint32 batchSkips = 0;
-        FIRE_ID(
-            m_spellInfo->events.id
-            , Spell,OnBatch
-            , TSSpell(this)
-            , TSMutableNumber<uint32>(&batchGroup)
-            , TSMutableNumber<uint32>(&batchSkips)
-        )
-        SpellBatchGroup group = SpellBatchGroup(batchGroup);
-        if (group != SPELL_BATCH_IMMEDIATE)
-        {
-            m_batchSkips = batchSkips;
-            m_batchGroup = group;
-            m_batchTime = GetCaster()->GetMap()->GetBatchTime();
-        }
-    }
-    // @net-end
-
     // Okay, everything is prepared. Now we need to distinguish between immediate and evented delayed spells
-    if ((m_spellInfo->Speed > 0.0f && !m_spellInfo->IsChanneled()) || m_spellInfo->HasAttribute(SPELL_ATTR4_UNK4))
+    // @net-begin: spell-batching
+    if ((m_delayMoment && !m_spellInfo->IsChanneled()) || m_spellInfo->HasAttribute(SPELL_ATTR4_UNK4))
+    // @net-end
     {
         // Remove used for cast item if need (it can be already NULL after TakeReagents call
         // in case delayed spell remove item at cast delay start
@@ -3545,9 +3536,6 @@ void Spell::_cast(bool skipCheck)
         if (Unit* unitCaster = m_caster->ToUnit())
             if (unitCaster->HasUnitState(UNIT_STATE_CASTING) && !unitCaster->IsNonMeleeSpellCast(false, false, true))
                 unitCaster->ClearUnitState(UNIT_STATE_CASTING);
-        // @net-begin: spell-batching
-        m_isDelayed = true;
-        // @net-end
     }
     else
     {
@@ -3612,11 +3600,6 @@ void Spell::_cast(bool skipCheck)
     if (Creature* caster = m_originalCaster->ToCreature())
         if (caster->IsAIEnabled())
             caster->AI()->OnSpellCast(GetSpellInfo());
-
-    // @net-begin: spell-batching
-    if (!IsBatchCompleted())
-        GetCaster()->GetMap()->BatchSpell(this);
-    // @net-end
 }
 
 template <class Container>
@@ -3636,10 +3619,6 @@ void Spell::DoProcessTargetContainer(Container& targetContainer)
 
 void Spell::handle_immediate()
 {
-    // @net-begin: spell-batching
-    if (!IsBatchCompleted())
-        return;
-    // @net-end
     // start channeling if applicable
     if (m_spellInfo->IsChanneled())
     {
@@ -3701,13 +3680,6 @@ void Spell::handle_immediate()
 
 uint64 Spell::handle_delayed(uint64 t_offset)
 {
-    // @net-begin: spell-batching
-    if (!IsBatchCompleted())
-    {
-        m_isDelayed = true;
-        return t_offset;
-    }
-    // @net-end
     if (!UpdatePointers())
     {
         // finish the spell if UpdatePointers() returned false, something wrong happened there
@@ -3862,10 +3834,6 @@ void Spell::SendSpellCooldown()
 
 void Spell::update(uint32 difftime)
 {
-    // @net-begin: spell-batching
-    if (!IsBatchCompleted())
-        return;
-    // @net-end
     // update pointers based at it's GUIDs
     if (!UpdatePointers())
     {
@@ -8035,34 +8003,6 @@ void Spell::LoadScripts()
         (*itr)->Register();
     }
 }
-
-// @net-begin: spell-batching
-void Spell::CompleteBatch()
-{
-    m_is_batch_completed = true;
-    if (!m_isDelayed)
-        handle_immediate();
-}
-
-bool Spell::IsBatchCompleted()
-{
-    if (m_is_batch_completed)
-        return true;
-    if (sWorld->GetBatchInterval() <= 0)
-        return true;
-    if (m_batchTime <= 0)
-        return true;
-    if (m_caster)
-        if (Map* map = m_caster->GetMap())
-            return m_batchTime != map->GetBatchTime();
-    return true;
-}
-
-void Spell::SkipBatch()
-{
-    if (m_batchSkips > 0) m_batchSkips--;
-}
-// @net-end
 
 void Spell::CallScriptBeforeCastHandlers()
 {
