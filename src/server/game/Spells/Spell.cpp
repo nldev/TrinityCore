@@ -2137,7 +2137,13 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     // Spell have speed - need calculate incoming time
     // Incoming time is zero for self casts. At least I think so.
     // @net-begin: spell-batching
-    if (m_caster != target)
+    Unit* casterOwner = m_caster->GetOwner();
+    Unit* targetOwner = target->GetOwner();
+    if (
+        (m_caster != target)
+        && (m_caster->IsPlayer() || (casterOwner && casterOwner->IsPlayer()))
+        && (target->IsPlayer() || (targetOwner && targetOwner->IsPlayer()))
+    )
     {
         if (m_spellInfo->Speed > 0.0f)
         {
