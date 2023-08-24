@@ -3122,7 +3122,15 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
         m_needComboPoints = false;
 
     uint32 param1 = 0, param2 = 0;
+    // @net-begin: on-spell-result
     SpellCastResult result = CheckCast(true, &param1, &param2);
+    FIRE_ID(
+          this->GetSpellInfo()->events.id
+        , Spell,OnSpellResult
+        , TSSpell(this)
+        , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&result))
+    );
+    // @net-end
     if (result != SPELL_CAST_OK && !IsAutoRepeat())          //always cast autorepeat dummy for triggering
     {
         // Periodic auras should be interrupted when aura triggers a spell which can't be cast
