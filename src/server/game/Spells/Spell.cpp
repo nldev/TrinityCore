@@ -2139,32 +2139,26 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     // @net-begin: spell-batching
     Unit* casterOwner = m_caster->GetOwner();
     Unit* targetOwner = target->GetOwner();
-    if (
-        (m_caster != target)
+    bool isBatchable = !m_spellInfo->IsChanneled()
+        && (m_caster != target)
         && (m_caster->IsPlayer() || (casterOwner && casterOwner->IsPlayer()))
-        && (target->IsPlayer() || (targetOwner && targetOwner->IsPlayer()))
-    )
+        && (target->IsPlayer() || (targetOwner && targetOwner->IsPlayer()));
+    if (m_spellInfo->Speed > 0.0f)
     {
-        if (m_spellInfo->Speed > 0.0f)
-        {
-            // calculate spell incoming interval
-            /// @todo this is a hack
-            float dist = m_caster->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
+        // calculate spell incoming interval
+        /// @todo this is a hack
+        float dist = m_caster->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
 
-            if (dist < 5.0f)
-                dist = 5.0f;
-            targetInfo.TimeDelay = uint64(std::floor(dist / m_spellInfo->Speed * 1000.0f));
+        if (dist < 5.0f)
+            dist = 5.0f;
+        targetInfo.TimeDelay = uint64(std::floor(dist / m_spellInfo->Speed * 1000.0f));
 
-            // Calculate minimum incoming time
-            if (!m_delayMoment || m_delayMoment > targetInfo.TimeDelay)
-                m_delayMoment = targetInfo.TimeDelay;
-        }
-        else
-        {
-            if (!m_spellInfo->IsChanneled())
-                m_delayMoment = caster->GetMap()->GetBatchPeriod();
-        }
+        // Calculate minimum incoming time
+        if (!m_delayMoment || m_delayMoment > targetInfo.TimeDelay)
+            m_delayMoment = targetInfo.TimeDelay;
     }
+    else if (isBatchable)
+        m_delayMoment = caster->GetMap()->GetBatchPeriod();
     else
     // @net-end
         targetInfo.TimeDelay = 0ULL;
@@ -3131,7 +3125,7 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
     // @net-begin: on-spell-result
     SpellCastResult result = CheckCast(true, &param1, &param2);
     FIRE_ID(
-          this->GetSpellInfo()->events.id
+          m_spellInfo->events.id
         , Spell,OnSpellResult
         , TSSpell(this)
         , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&result))
