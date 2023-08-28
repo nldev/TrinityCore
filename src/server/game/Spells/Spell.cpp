@@ -2731,6 +2731,7 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         , TSSpell(this)
         , TSMutable<bool,bool>(&isOverride)
         , TSMutableNumber<uint32>(&miss)
+        , TSUnit(unit)
     );
     if (isOverride)
         return SpellMissInfo(miss);
