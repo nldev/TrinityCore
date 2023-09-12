@@ -2143,6 +2143,16 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
         && (m_caster != target)
         && (m_caster->IsPlayer() || (casterOwner && casterOwner->IsPlayer()))
         && (target->IsPlayer() || (targetOwner && targetOwner->IsPlayer()));
+    uint32 group = isBatchable ? 1 : 0;
+    uint32 skips = 0;
+    FIRE_ID(
+        m_spellInfo->events.id,
+        Spell,OnBatch,
+        TSSpell(this),
+        TSMutableNumber<uint32>(&group),
+        TSMutableNumber<uint32>(&skips)
+    );
+    isBatchable = group > 0;
     if (m_spellInfo->Speed > 0.0f)
     {
         // calculate spell incoming interval
