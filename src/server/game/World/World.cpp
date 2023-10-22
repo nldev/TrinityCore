@@ -1569,16 +1569,18 @@ void World::LoadConfigSettings(bool reload)
 
     // @net-begin: custom-config
     m_int_configs[CONFIG_NET_SPELL_RUPTURE] = sConfigMgr->GetIntDefault("Net.Spell.RUPTURE", 0);
-    m_int_configs[CONFIG_NET_SPELL_MASTER_POISONER] = sConfigMgr->GetIntDefault("Net.Spell.MASTER_POISONER", 0);
+    // m_int_configs[CONFIG_NET_SPELL_MASTER_POISONER] = sConfigMgr->GetIntDefault("Net.Spell.MASTER_POISONER", 0);
     m_int_configs[CONFIG_NET_SPELL_HEMORRHAGE] = sConfigMgr->GetIntDefault("Net.Spell.HEMORRHAGE", 0);
     m_int_configs[CONFIG_NET_SPELL_FAN_OF_KNIVES] = sConfigMgr->GetIntDefault("Net.Spell.FAN_OF_KNIVES", 0);
     m_int_configs[CONFIG_NET_SPELL_GHOSTLY_STRIKE] = sConfigMgr->GetIntDefault("Net.Spell.GHOSTLY_STRIKE", 0);
     m_int_configs[CONFIG_NET_SPELL_MUTILATE] = sConfigMgr->GetIntDefault("Net.Spell.MUTILATE", 0);
-    m_int_configs[CONFIG_NET_SPELL_STEALTH] = sConfigMgr->GetIntDefault("Net.Spell.STEALTH", 0);
+    m_int_configs[CONFIG_NET_SPELL_STEALTH_SPELL] = sConfigMgr->GetIntDefault("Net.Spell.STEALTH_SPELL", 0);
     m_int_configs[CONFIG_NET_SPELL_VANISH] = sConfigMgr->GetIntDefault("Net.Spell.VANISH", 0);
     m_int_configs[CONFIG_NET_SPELL_EVISCERATE] = sConfigMgr->GetIntDefault("Net.Spell.EVISCERATE", 0);
-    m_int_configs[CONFIG_NET_SPELL_OVERKILL] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL", 0);
-    m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL_EFFECT", 0);
+    // m_int_configs[CONFIG_NET_SPELL_OVERKILL] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL", 0);
+    // m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL_EFFECT", 0);
+    m_int_configs[CONFIG_NET_SPELL_OVERKILL] = 58426;
+    m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = 58427;
     m_int_configs[CONFIG_NET_SPELL_ENVENOM] = sConfigMgr->GetIntDefault("Net.Spell.ENVENOM", 0);
     m_int_configs[CONFIG_NET_SPELL_DEADLY_POISON_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.DEADLY_POISON_EFFECT", 0);
     m_int_configs[CONFIG_NET_SPELL_ARCANE_BLAST] = sConfigMgr->GetIntDefault("Net.Spell.ARCANE_BLAST", 0);

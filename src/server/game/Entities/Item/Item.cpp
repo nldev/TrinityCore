@@ -341,6 +341,10 @@ void Item::UpdateDuration(Player* owner, uint32 diff)
     }
 
     SetUInt32Value(ITEM_FIELD_DURATION, GetUInt32Value(ITEM_FIELD_DURATION) - diff);
+    // @net-begin: item-duration
+    // FIXME: fast way to add duration to scripting, should be a TSItem method.
+    TSItem(this)->SetNumber("ITEM_DURATION",  GetUInt32Value(ITEM_FIELD_DURATION));
+    // @net-end
     SetState(ITEM_CHANGED, owner);                          // save new time in database
 }
 

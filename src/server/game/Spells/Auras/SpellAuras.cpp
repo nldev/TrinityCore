@@ -1732,7 +1732,7 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
         case SPELLFAMILY_ROGUE:
             // Stealth
             // @net-begin: custom-config
-            if (GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_STEALTH))
+            if (GetSpellInfo()->Id == sWorld->getIntConfig(CONFIG_NET_SPELL_STEALTH_SPELL))
             // @net-end
             {
                 // Master of subtlety

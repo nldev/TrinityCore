@@ -341,7 +341,7 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     TC_LOG_DEBUG("network", "WORLD: got cast spell packet, castCount: %u, spellId: %u, castFlags: %u, data length = %u", castCount, spellId, castFlags, (uint32)recvPacket.size());
 
     // ignore for remote control state (for player case)
-    // @net-begin: usable-while-confused
+    // @net-begin: on-handle-cast-spell-opcode-hook
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
     if (!spellInfo)
     {
@@ -350,10 +350,20 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         return;
     }
     Unit* mover = GetGameClient()->GetActivelyMovedUnit();
-    bool const is_vehicle = mover && (mover != _player) && (mover->GetTypeId() == TYPEID_PLAYER);
-    bool const is_usable_while_confused = !is_vehicle && spellInfo->HasAttribute(SPELL_ATTR5_USABLE_WHILE_CONFUSED);
-    bool const is_usable_while_feared = !is_vehicle && spellInfo->HasAttribute(SPELL_ATTR5_USABLE_WHILE_FEARED);
-    if (!is_usable_while_confused && !is_usable_while_feared && (!mover || is_vehicle))
+    bool const isPlayer = _player && _player->IsPlayer();
+    bool const isVehicle = mover && (mover->GetTypeId() == TYPEID_PLAYER) && (mover != _player);
+    bool is_exception = false;
+    if (isPlayer && !isVehicle)
+    {
+        FIRE_ID(
+              spellInfo->events.id
+            , Spell,OnHandleCastSpellOpcode
+            , TSSpellInfo(spellInfo)
+            , TSPlayer(_player->ToPlayer())
+            , TSMutable<bool,bool>(&is_exception)
+        )
+    }
+    if (!is_exception && (!mover || isVehicle))
     {
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
@@ -366,9 +376,9 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    // @net-begin: usable-while-confused
-    Unit* caster = (is_usable_while_confused || is_usable_while_feared) ? _player : mover;
-    if (!is_usable_while_confused && !is_usable_while_feared && (caster->GetTypeId() == TYPEID_UNIT && !caster->ToCreature()->HasSpell(spellId)))
+    // @net-begin: on-handle-cast-spell-opcode-hook
+    Unit* caster = is_exception ? _player : mover;
+    if (!is_exception && (caster->GetTypeId() == TYPEID_UNIT && !caster->ToCreature()->HasSpell(spellId)))
     // @net-end
     {
         // If the vehicle creature does not have the spell but it allows the passenger to cast own spells
@@ -387,11 +397,13 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     HandleClientCastFlags(recvPacket, castFlags, targets);
 
     // not have spell in spellbook
-    // @net-begin: usable-while-confused
-    if (!is_usable_while_feared && !is_usable_while_confused && (caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->HasActiveSpell(spellId)))
+    // @net-begin: on-handle-cast-spell-opcode-hook
+    if (isPlayer && !caster->ToPlayer()->HasSpell(spellId))
     // @net-end
     {
-        bool allow = false;
+        // @net-begin: on-handle-cast-spell-opcode-hook
+        bool allow = is_exception ? true : caster->ToPlayer()->HasActiveSpell(spellId);
+        // @net-end
 
         // allow casting of unknown spells for special lock cases
         if (GameObject *go = targets.GetGOTarget())
