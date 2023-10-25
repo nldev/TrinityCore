@@ -2204,12 +2204,13 @@ void Unit::AddExtraAttacks(uint32 count)
     extraAttacksTargets[targetGUID] += count;
 }
 
+// @net-begin: stats-rework
 MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackType attType) const
 {
+    int8 result = -1;
     if (victim->GetTypeId() == TYPEID_UNIT && victim->ToCreature()->IsInEvadeMode())
-        return MELEE_HIT_EVADE;
+        result = uint8(MELEE_HIT_EVADE);
 
-    // @net-begin: stats-rework
     int32 const attackerMaxSkillValueForLevel = GetMaxSkillValueForLevel(victim);
     int32 const victimMaxSkillValueForLevel = victim->GetMaxSkillValueForLevel(victim);
 
@@ -2245,7 +2246,6 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     parry_chance_f -= hit_chance_f;
     if (parry_chance_f < 0)
         parry_chance_f = 0;
-    // @net-end
 
     FIRE(Unit,OnCalcMeleeOutcome
         , TSUnit(const_cast<Unit*>(this))
@@ -2258,7 +2258,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         , TSMutableNumber<float>(&glancing_chance_f)
         , TSMutableNumber<float>(&crushing_chance_f)
         , attType
-        );
+    );
 
     int32 miss_chance = int32(miss_chance_f*100.0f);
     int32 crit_chance = int32(crit_chance_f*100.0f);
@@ -2292,44 +2292,44 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
 
     // 1. MISS
     tmp = miss_chance;
-    if (tmp > 0 && roll < (sum += tmp))
-        return MELEE_HIT_MISS;
+    if ((result < 0) && (tmp > 0 && roll < (sum += tmp)))
+        result = int8(MELEE_HIT_MISS);
 
     // always crit against a sitting target (except 0 crit chance)
     if (victim->GetTypeId() == TYPEID_PLAYER && crit_chance > 0 && !victim->IsStandState())
-        return MELEE_HIT_CRIT;
+        result = int8(MELEE_HIT_CRIT);
 
     // 2. DODGE
-    if (canDodge)
+    if ((result < 0) && canDodge)
     {
         tmp = dodge_chance;
         if (tmp > 0                                         // check if unit _can_ dodge
             && roll < (sum += tmp))
-            return MELEE_HIT_DODGE;
+            result = int8(MELEE_HIT_DODGE);
     }
 
     // 3. PARRY
-    if (canParryOrBlock)
+    if ((result < 0) && canParryOrBlock)
     {
         tmp = parry_chance;
         if (tmp > 0                                         // check if unit _can_ parry
             && roll < (sum += tmp))
-            return MELEE_HIT_PARRY;
+            result = int8(MELEE_HIT_PARRY);
     }
 
     // 4. GLANCING
     // @tswow-begin
-    if (glancing_chance)
+    if ((result < 0) && glancing_chance)
     {
         tmp = glancing_chance;
         if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_GLANCING;
+            result = int8(MELEE_HIT_GLANCING);
     }
     // @tswow-end
     // Max 40% chance to score a glancing blow against mobs of the same or higher level (only players and pets, not for ranged weapons).
-    if ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
+    if ((result < 0) && ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
         victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet() &&
-        GetLevel() <= victim->GetLevelForTarget(this))
+        GetLevel() <= victim->GetLevelForTarget(this)))
     {
         // cap possible value (with bonuses > max skill)
         int32 skill = attackerWeaponSkill;
@@ -2341,37 +2341,37 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         tmp = 600 + (victimDefenseSkill - skill) * 120;
         tmp = std::min(tmp, 4000);
         if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_GLANCING;
+            result = int8(MELEE_HIT_GLANCING);
     }
 
     // 5. BLOCK
-    if (canParryOrBlock)
+    if ((result < 0) && canParryOrBlock)
     {
         tmp = block_chance;
         if (tmp > 0                                          // check if unit _can_ block
             && roll < (sum += tmp))
-            return MELEE_HIT_BLOCK;
+            result = int8(MELEE_HIT_BLOCK);
     }
 
     // 6.CRIT
     tmp = crit_chance;
-    if (tmp > 0 && roll < (sum += tmp))
-        return MELEE_HIT_CRIT;
+    if ((result < 0) && (tmp > 0 && roll < (sum += tmp)))
+        result = int8(MELEE_HIT_CRIT);
 
     // 7. CRUSHING
     // @tswow-begin
-    if (crushing_chance)
+    if ((result < 0) && crushing_chance)
     {
         tmp = crushing_chance;
         if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_CRUSHING;
+            result = int8(MELEE_HIT_CRUSHING);
     }
     // @tswow-end
     // mobs can score crushing blows if they're 4 or more levels above victim
-    if (GetLevelForTarget(victim) >= victim->GetLevelForTarget(this) + 4 &&
+    if ((result < 0) && (GetLevelForTarget(victim) >= victim->GetLevelForTarget(this) + 4 &&
         // can be from by creature (if can) or from controlled player that considered as creature
         !IsControlledByPlayer() &&
-        !(GetTypeId() == TYPEID_UNIT && ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS))
+        !(GetTypeId() == TYPEID_UNIT && ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS)))
     {
         // when their weapon skill is 15 or more above victim's defense skill
         tmp = victimDefenseSkill;
@@ -2385,12 +2385,23 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
         // add 2% chance per lacking skill point
         tmp = tmp * 200 - 1500;
         if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_CRUSHING;
+            result = int8(MELEE_HIT_CRUSHING);
     }
 
     // 8. HIT
-    return MELEE_HIT_NORMAL;
+    if (result < 0)
+      result = MELEE_HIT_NORMAL;
+
+    uint8 outcome = uint8(result);
+    FIRE(Unit,OnOverrideMeleeHitOutcome
+        , TSUnit(const_cast<Unit*>(this))
+        , TSUnit(const_cast<Unit*>(victim))
+        , TSMutableNumber<uint8>(&outcome)
+        , attType
+    );
+    return MeleeHitOutcome(outcome);
 }
+// @net-end
 
 uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, uint8 itemDamagesMask /*= 0*/) const
 {
