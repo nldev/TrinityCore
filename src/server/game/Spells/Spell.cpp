@@ -2362,8 +2362,9 @@ void Spell::TargetInfo::PreprocessTarget(Spell* spell)
               ? spell->m_caster->GetOwner()->ToUnit()
               : spell->m_caster->ToUnit();
 
-    if (spell->m_originalCaster && MissCondition != SPELL_MISS_EVADE && !spell->m_originalCaster->IsFriendlyTo(unit) && (!spell->m_spellInfo->IsPositive() || spell->m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (spell->m_spellInfo->HasInitialAggro() || unit->IsEngaged()))
-        unit->SetInCombatWith(spell->m_originalCaster);
+    // @net-begin: vanilla-combat
+    bool isEnteringCombat = spell->m_originalCaster && MissCondition != SPELL_MISS_EVADE && !spell->m_originalCaster->IsFriendlyTo(unit) && (!spell->m_spellInfo->IsPositive() || spell->m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (spell->m_spellInfo->HasInitialAggro() || unit->IsEngaged());
+    // @net-end
 
     spell->CallScriptBeforeHitHandlers(MissCondition);
 
@@ -2372,8 +2373,10 @@ void Spell::TargetInfo::PreprocessTarget(Spell* spell)
     {
         // if target is flagged for pvp also flag caster if a player
         // but respect current pvp rules (buffing/healing npcs flagged for pvp only flags you if they are in combat)
-        if (unit->IsPvP() && (unit->IsInCombat() || unit->IsCharmedOwnedByPlayerOrPlayer()) && spell->m_caster->GetTypeId() == TYPEID_PLAYER)
+        // @net-begin: vanilla-combat
+        if (unit->IsPvP() && (isEnteringCombat || unit->IsCharmedOwnedByPlayerOrPlayer()) && spell->m_caster->GetTypeId() == TYPEID_PLAYER)
             _enablePVP = true; // Decide on PvP flagging now, but act on it later.
+        // @net-end
 
         SpellMissInfo missInfo = spell->PreprocessSpellHit(_spellHitTarget, ScaleAura, *this);
         if (missInfo != SPELL_MISS_NONE)
@@ -2384,7 +2387,12 @@ void Spell::TargetInfo::PreprocessTarget(Spell* spell)
             spell->m_healing = 0;
             _spellHitTarget = nullptr;
         }
+    // @net-begin: vanilla-combat
+    } else if (isEnteringCombat)
+    {
+            unit->SetInCombatWith(spell->m_originalCaster);
     }
+    // @net-end
 
     spell->CallScriptOnHitHandlers();
 
@@ -2732,9 +2740,18 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
     if (!unit)
         return SPELL_MISS_EVADE;
 
+    // Target may have begun evading between launch and hit phases - re-check now
+    if (Creature* creatureTarget = unit->ToCreature())
+        if (creatureTarget->IsEvadingAttacks())
+            return SPELL_MISS_EVADE;
+
     // @net-begin: on-preprocess-spell-hit
-    bool isOverride = false;
+    // @net-begin: vanilla-combat
     uint32 miss = SPELL_MISS_NONE;
+    bool isOverride = false;
+    bool isCombatOverride = false;
+    bool isCombatOriginal = m_originalCaster && !m_originalCaster->IsFriendlyTo(unit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (m_spellInfo->HasInitialAggro() || unit->IsEngaged());
+    bool isCombat = isCombatOriginal;
     FIRE_ID(
         this->m_spellInfo->events.id
         , Spell,OnPreprocessSpellHit
@@ -2742,19 +2759,28 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         , TSMutable<bool,bool>(&isOverride)
         , TSMutableNumber<uint32>(&miss)
         , TSUnit(unit)
+        , TSMutable<bool,bool>(&isCombatOverride)
+        , TSMutable<bool,bool>(&isCombat)
     );
     if (isOverride)
-        return SpellMissInfo(miss);
+    {
+        if (miss == SPELL_MISS_EVADE)
+            return SPELL_MISS_EVADE;
+        else if ((miss != SPELL_MISS_NONE) && (miss != SPELL_MISS_ABSORB))
+        {
+            if ((isCombatOverride && isCombat) || isCombatOriginal)
+                unit->SetInCombatWith(m_originalCaster);
+            return SpellMissInfo(miss);
+        }
+    }
+    // @net-end
     // @net-end
 
-    // Target may have begun evading between launch and hit phases - re-check now
-    if (Creature* creatureTarget = unit->ToCreature())
-        if (creatureTarget->IsEvadingAttacks())
-            return SPELL_MISS_EVADE;
-
     // For delayed spells immunity may be applied between missile launch and hit - check immunity for that case
+    // @net-begin: on-preprocess-spell-hit
     // @net-begin: spell-batching
-    if (m_delayMoment && unit->IsImmunedToSpell(m_spellInfo, m_caster))
+    if (!isOverride && m_delayMoment && unit->IsImmunedToSpell(m_spellInfo, m_caster))
+    // @net-end
     // @net-end
         return SPELL_MISS_IMMUNE;
 
@@ -2774,8 +2800,10 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
     if (m_caster != unit)
     {
         // Recheck  UNIT_FLAG_NON_ATTACKABLE for delayed spells
+        // @net-begin: on-preprocess-spell-hit
         // @net-begin: spell-batching
-        if (m_delayMoment && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) && unit->GetCharmerOrOwnerGUID() != m_caster->GetGUID())
+        if (!isOverride && m_delayMoment && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) && unit->GetCharmerOrOwnerGUID() != m_caster->GetGUID())
+        // @net-end
         // @net-end
             return SPELL_MISS_EVADE;
 
@@ -2785,7 +2813,7 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         {
             // for delayed spells ignore negative spells (after duel end) for friendly targets
             // @net-begin: spell-batching
-            if (m_delayMoment && unit->GetTypeId() == TYPEID_PLAYER && !IsPositive() && !m_caster->IsValidAssistTarget(unit, m_spellInfo))
+            if (!isOverride && m_delayMoment && unit->GetTypeId() == TYPEID_PLAYER && !IsPositive() && !m_caster->IsValidAssistTarget(unit, m_spellInfo))
             // @net-end
                 return SPELL_MISS_EVADE;
 
@@ -2870,10 +2898,21 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         hitInfo.AuraDuration = Aura::CalcMaxDuration(hitInfo.AuraSpellInfo, origCaster);
 
         // unit is immune to aura if it was diminished to 0 duration
-        if (!hitInfo.Positive && !unit->ApplyDiminishingToDuration(hitInfo.AuraSpellInfo, triggered, hitInfo.AuraDuration, origCaster, diminishLevel))
+        // @net-begin: on-preprocess-spell-hit
+        if (!isOverride && !hitInfo.Positive && !unit->ApplyDiminishingToDuration(hitInfo.AuraSpellInfo, triggered, hitInfo.AuraDuration, origCaster, diminishLevel))
+        // @net-end
             if (std::all_of(std::begin(hitInfo.AuraSpellInfo->GetEffects()), std::end(hitInfo.AuraSpellInfo->GetEffects()), [](SpellEffectInfo const& effInfo) { return !effInfo.IsEffect() || effInfo.Effect == SPELL_EFFECT_APPLY_AURA; }))
                 return SPELL_MISS_IMMUNE;
     }
+
+    // @net-begin: vanilla-combat
+    if ((isCombatOverride && isCombat) || isCombatOriginal)
+        unit->SetInCombatWith(m_originalCaster);
+    // @net-end
+    // @net-begin: on-preprocess-spell-hit
+    if (isOverride)
+        return SpellMissInfo(miss);
+    // @net-end
 
     return SPELL_MISS_NONE;
 }
@@ -2885,7 +2924,6 @@ void Spell::DoSpellEffectHit(Unit* unit, SpellEffectInfo const& spellEffectInfo,
         WorldObject* caster = m_caster;
         if (m_originalCaster)
             caster = m_originalCaster;
-
         if (caster)
         {
             bool refresh = false;
@@ -7776,9 +7814,8 @@ void Spell::PreprocessSpellLaunch(TargetInfo& targetInfo)
     if (!targetUnit)
         return;
 
-    // This will only cause combat - the target will engage once the projectile hits (in Spell::TargetInfo::PreprocessTarget)
-    if (m_originalCaster && targetInfo.MissCondition != SPELL_MISS_EVADE && !m_originalCaster->IsFriendlyTo(targetUnit) && (!m_spellInfo->IsPositive() || m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)) && (m_spellInfo->HasInitialAggro() || targetUnit->IsEngaged()))
-        m_originalCaster->SetInCombatWith(targetUnit, true);
+    // @net-begin: vanilla-combat
+    // @net-end
 
     Unit* unit = nullptr;
     // In case spell hit target, do all effect on that target
