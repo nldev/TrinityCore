@@ -2768,7 +2768,9 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
             return SPELL_MISS_EVADE;
         else if ((miss != SPELL_MISS_NONE) && (miss != SPELL_MISS_ABSORB))
         {
-            if ((isCombatOverride && isCombat) || isCombatOriginal)
+            // @net-begin: vanilla-combat
+            if ((isCombatOverride && isCombat) || (!isCombatOverride && isCombatOriginal))
+            // @net-end
                 unit->SetInCombatWith(m_originalCaster);
             return SpellMissInfo(miss);
         }
@@ -2906,7 +2908,7 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
     }
 
     // @net-begin: vanilla-combat
-    if ((isCombatOverride && isCombat) || isCombatOriginal)
+    if ((isCombatOverride && isCombat) || (!isCombatOverride && isCombatOriginal))
         unit->SetInCombatWith(m_originalCaster);
     // @net-end
     // @net-begin: on-preprocess-spell-hit
