@@ -172,7 +172,7 @@ void TempSummon::Update(uint32 diff)
         }
         default:
             UnSummon();
-            TC_LOG_ERROR("entities.unit", "Temporary summoned creature (entry: %u) have unknown type %u of ", GetEntry(), m_type);
+            TC_LOG_ERROR("entities.unit", "Temporary summoned creature (entry: {}) have unknown type {} of ", GetEntry(), m_type);
             break;
     }
 }
@@ -275,6 +275,7 @@ void TempSummon::UnSummon(uint32 msTime)
         return;
     }
 
+    FIRE_ID(GetCreatureTemplate()->events.id, Creature, OnDespawn, TSCreature(this), TSWorldObject(GetSummoner()));
     if (WorldObject * owner = GetSummoner())
     {
         // @tswow-begin
@@ -284,6 +285,7 @@ void TempSummon::UnSummon(uint32 msTime)
             FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnSummonDespawn,TSCreature(c),TSCreature(this));
             // @tswow-end
         }
+
         // @tswow-end
         if (owner->GetTypeId() == TYPEID_UNIT && owner->ToCreature()->IsAIEnabled())
             owner->ToCreature()->AI()->SummonedCreatureDespawn(this);
@@ -312,7 +314,7 @@ void TempSummon::RemoveFromWorld()
                     owner->m_SummonSlot[slot].Clear();
 
     //if (GetOwnerGUID())
-    //    TC_LOG_ERROR("entities.unit", "Unit %u has owner guid when removed from world", GetEntry());
+    //    TC_LOG_ERROR("entities.unit", "Unit {} has owner guid when removed from world", GetEntry());
 
     Creature::RemoveFromWorld();
 }
