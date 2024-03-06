@@ -1118,6 +1118,9 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             HotWSpellId = 24899;
             break;
         case FORM_BATTLESTANCE:
+        // @net-begin: gladiator-stance
+        case FORM_GLADIATORSTANCE:
+        // @net-end
             spellId = 21156;
             break;
         case FORM_DEFENSIVESTANCE:
@@ -1681,6 +1684,9 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         case FORM_BATTLESTANCE:                             // 0x11
         case FORM_DEFENSIVESTANCE:                          // 0x12
         case FORM_BERSERKERSTANCE:                          // 0x13
+        // @net-begin: gladiator-stance
+        case FORM_GLADIATORSTANCE:                          // 0x14
+        // @net-end
             PowerType = POWER_RAGE;
             break;
 
@@ -1698,7 +1704,6 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         case FORM_CREATURECAT:                              // 0x0F
         case FORM_GHOSTWOLF:                                // 0x10
 
-        case FORM_TEST:                                     // 0x14
         case FORM_ZOMBIE:                                   // 0x15
         case FORM_METAMORPHOSIS:                            // 0x16
         case FORM_UNDEAD:                                   // 0x19
@@ -1849,10 +1854,15 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
             case FORM_BATTLESTANCE:
             case FORM_DEFENSIVESTANCE:
             case FORM_BERSERKERSTANCE:
+            // @net-begin: gladiator-stance
+            case FORM_GLADIATORSTANCE:
+            // @net-end
             {
                 uint32 Rage_val = 0;
                 // Defensive Tactics
-                if (form == FORM_DEFENSIVESTANCE)
+                // @net-begin: gladiator-stance
+                if ((form == FORM_DEFENSIVESTANCE) || (form == FORM_GLADIATORSTANCE))
+                // @net-end
                 {
                     if (AuraEffect const* aurEff = target->IsScriptOverriden(m_spellInfo, 831))
                         Rage_val += aurEff->GetAmount() * 10;

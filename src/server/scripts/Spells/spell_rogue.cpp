@@ -186,7 +186,8 @@ class spell_rog_deadly_brew : public AuraScript
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-        eventInfo.GetActor()->CastSpell(eventInfo.GetProcTarget(), SPELL_ROGUE_CRIPPLING_POISON, aurEff);
+        // @net-begin: deadly-brew-rework
+        // @net-end
     }
 
     void Register() override

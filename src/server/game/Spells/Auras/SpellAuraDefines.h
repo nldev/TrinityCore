@@ -426,7 +426,9 @@ enum ShapeshiftForm
     FORM_BATTLESTANCE       = 0x11,
     FORM_DEFENSIVESTANCE    = 0x12,
     FORM_BERSERKERSTANCE    = 0x13,
-    FORM_TEST               = 0x14,
+    // @net-begin: gladiator-stance
+    FORM_GLADIATORSTANCE    = 0x14,
+    // @net-end
     FORM_ZOMBIE             = 0x15,
     FORM_METAMORPHOSIS      = 0x16,
     FORM_UNDEAD             = 0x19,
