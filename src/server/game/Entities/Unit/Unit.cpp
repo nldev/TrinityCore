@@ -6427,6 +6427,21 @@ void Unit::SetCharm(Unit* charm, bool apply)
         gain = victim->ModifyHealth(int32(addhealth));
 
     // Hook for OnHeal Event
+    // @net-begin: on-heal
+    if (auto spellInfo = healInfo.GetSpellInfo())
+    {
+        auto heal = healInfo.GetHeal();
+        FIRE_ID(
+              spellInfo->events.id
+            , Spell,OnHeal
+            , TSSpellInfo(spellInfo)
+            , TSUnit(healer)
+            , TSUnit(victim)
+            , TSMutableNumber<uint32>(&heal)
+        );
+        healInfo.SetHeal(heal);
+    }
+    // @net-end
     sScriptMgr->OnHeal(healer, victim, (uint32&)gain);
 
     Unit* unit = healer;
