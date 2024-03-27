@@ -8068,7 +8068,13 @@ void Spell::CallScriptBeforeCastHandlers()
         , TSSpell(this)
         , TSMutable<bool,bool>(&cancel)
     );
-    if (cancel) return;
+    // @net-begin: fix-on-before-cast-hook
+    if (cancel)
+    {
+        this->finish();
+        return;
+    }
+    // @net-end
     // @tswow-end
 
     for (auto scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end(); ++scritr)
