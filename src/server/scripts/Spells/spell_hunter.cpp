@@ -332,11 +332,9 @@ class spell_hun_disengage : public SpellScript
 
     SpellCastResult CheckCast()
     {
-        Unit* caster = GetCaster();
-        if (caster->GetTypeId() == TYPEID_PLAYER && !caster->IsInCombat())
-            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-
+        // @net-begin: modern-disengage
         return SPELL_CAST_OK;
+        // @net-end
     }
 
     void Register() override

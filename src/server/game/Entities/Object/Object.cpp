@@ -1560,19 +1560,32 @@ float WorldObject::GetSightRange(WorldObject const* target) const
     return 0.0f;
 }
 
+// @net-begin: on-can-see-or-detect
 bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bool distanceCheck, bool checkAlert) const
 {
+    bool isModified = false;
+    bool result = true;
+
     if (this == obj)
-        return true;
+    {
+        isModified = true;
+        result = true;
+    }
 
-    if (obj->IsNeverVisible(implicitDetect) || CanNeverSee(obj))
-        return false;
+    if (!isModified && (obj->IsNeverVisible(implicitDetect) || CanNeverSee(obj)))
+    {
+        isModified = true;
+        result = false;
+    }
 
-    if (obj->IsAlwaysVisibleFor(this) || CanAlwaysSee(obj))
-        return true;
+    if (!isModified && (obj->IsAlwaysVisibleFor(this) || CanAlwaysSee(obj)))
+    {
+        isModified = true;
+        result = true;
+    }
 
     bool corpseVisibility = false;
-    if (distanceCheck)
+    if (!isModified && distanceCheck)
     {
         bool corpseCheck = false;
         if (Player const* thisPlayer = ToPlayer())
@@ -1594,40 +1607,56 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bo
                 // Don't allow to detect vehicle accessories if you can't see vehicle
                 if (Unit const* vehicle = target->GetVehicleBase())
                     if (!thisPlayer->HaveAtClient(vehicle))
-                        return false;
+                    {
+                        isModified = true;
+                        result = false;
+                    }
             }
         }
 
         WorldObject const* viewpoint = this;
-        if (Player const* player = ToPlayer())
-        {
-            viewpoint = player->GetViewpoint();
+        if (!isModified)
+            if (Player const* player = ToPlayer())
+            {
+                viewpoint = player->GetViewpoint();
 
-            if (Creature const* creature = obj->ToCreature())
-                if (TempSummon const* tempSummon = creature->ToTempSummon())
-                    if (tempSummon->IsVisibleBySummonerOnly() && GetGUID() != tempSummon->GetSummonerGUID())
-                        return false;
-        }
+                if (Creature const* creature = obj->ToCreature())
+                    if (TempSummon const* tempSummon = creature->ToTempSummon())
+                        if (tempSummon->IsVisibleBySummonerOnly() && GetGUID() != tempSummon->GetSummonerGUID())
+                        {
+                            isModified = true;
+                            result = false;
+                        }
+            }
 
         if (!viewpoint)
             viewpoint = this;
 
-        if (!corpseCheck && !viewpoint->IsWithinDist(obj, GetSightRange(obj), false))
-            return false;
+        if (!isModified && !corpseCheck && !viewpoint->IsWithinDist(obj, GetSightRange(obj), false))
+        {
+            isModified = true;
+            result = false;
+        }
     }
 
     // GM visibility off or hidden NPC
-    if (!obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GM))
+    if (!isModified && !obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GM))
     {
         // Stop checking other things for GMs
         if (m_serverSideVisibilityDetect.GetValue(SERVERSIDE_VISIBILITY_GM))
-            return true;
+        {
+            isModified = true;
+            result = true;
+        }
     }
-    else
-        return m_serverSideVisibilityDetect.GetValue(SERVERSIDE_VISIBILITY_GM) >= obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GM);
+    else if (!isModified)
+    {
+        isModified = true;
+        result = m_serverSideVisibilityDetect.GetValue(SERVERSIDE_VISIBILITY_GM) >= obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GM);
+    }
 
     // Ghost players, Spirit Healers, and some other NPCs
-    if (!corpseVisibility && !(obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GHOST) & m_serverSideVisibilityDetect.GetValue(SERVERSIDE_VISIBILITY_GHOST)))
+    if (!isModified && !corpseVisibility && !(obj->m_serverSideVisibility.GetValue(SERVERSIDE_VISIBILITY_GHOST) & m_serverSideVisibilityDetect.GetValue(SERVERSIDE_VISIBILITY_GHOST)))
     {
         // Alive players can see dead players in some cases, but other objects can't do that
         if (Player const* thisPlayer = ToPlayer())
@@ -1635,23 +1664,43 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bo
             if (Player const* objPlayer = obj->ToPlayer())
             {
                 if (thisPlayer->GetTeam() != objPlayer->GetTeam() || !thisPlayer->IsGroupVisibleFor(objPlayer))
-                    return false;
+                {
+                    isModified = true;
+                    result = false;
+                }
             }
             else
-                return false;
+            {
+                isModified = true;
+                result = false;
+            }
         }
         else
-            return false;
+        {
+            isModified = true;
+            result = false;
+        }
     }
 
-    if (obj->IsInvisibleDueToDespawn())
-        return false;
+    if (!isModified && obj->IsInvisibleDueToDespawn())
+    {
+        isModified = true;
+        result = false;
+    }
 
-    if (!CanDetect(obj, implicitDetect, checkAlert))
-        return false;
+    if (!isModified && !CanDetect(obj, implicitDetect, checkAlert))
+        result = false;
 
-    return true;
+    if (Unit const* unit = ToUnit())
+        FIRE(Unit,OnCanSeeOrDetect
+            , TSUnit(const_cast<Unit*>(unit))
+            , TSWorldObject(const_cast<WorldObject*>(obj))
+            , TSMutable<bool,bool>(&result)
+        )
+
+    return result;
 }
+// @net-end
 
 bool WorldObject::CanNeverSee(WorldObject const* obj) const
 {
@@ -1698,9 +1747,8 @@ bool WorldObject::CanDetectInvisibilityOf(WorldObject const* obj) const
     // It isn't possible in invisibility to detect something that can't detect the invisible object
     // (it's at least true for spell: 66)
     // It seems like that only Units are affected by this check (couldn't see arena doors with preparation invisibility)
-    if (obj->ToUnit())
-        if ((m_invisibility.GetFlags() & obj->m_invisibilityDetect.GetFlags()) != m_invisibility.GetFlags())
-            return false;
+    // @net-begin: tbc-invisibility
+    // @net-end
 
     for (uint32 i = 0; i < TOTAL_INVISIBILITY_TYPES; ++i)
     {
@@ -1734,7 +1782,7 @@ bool WorldObject::CanDetectStealthOf(WorldObject const* obj, bool checkAlert) co
     if (unit)
         combatReach = unit->GetCombatReach();
 
-    // @net-begin: on-can-detect-stealth
+    // @net-begin: on-cancel-stealth-detection
     bool isCancel = false;
     if (unit)
         FIRE(Unit,OnCancelStealthDetection

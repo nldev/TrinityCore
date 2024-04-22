@@ -1863,7 +1863,7 @@ SpellCastResult SpellInfo::CheckVehicle(Unit const* caster) const
 
 bool SpellInfo::CheckTargetCreatureType(Unit const* target) const
 {
-    // @net-begin: pvp-curse-of-doom
+    // @net-begin: modern-curses
     // TODO: replace with tswow hook
     // @net-end
 
@@ -2133,8 +2133,14 @@ void SpellInfo::_LoadSpellSpecific()
             }
             case SPELLFAMILY_WARLOCK:
             {
-                // @net-begin: pvp-curse-of-doom
-                if (Dispel == DISPEL_CURSE && Id != 603)
+                // @net-begin: modern-curses
+                if (
+                    (Dispel == DISPEL_CURSE)
+                    && (Id != sWorld->getIntConfig(CONFIG_NET_SPELL_DOOM))
+                    && (Id != sWorld->getIntConfig(CONFIG_NET_SPELL_MINOR_AGONY))
+                    && (Id != sWorld->getIntConfig(CONFIG_NET_SPELL_AGONY))
+                    && (Id != sWorld->getIntConfig(CONFIG_NET_SPELL_EXHAUSTION))
+                )
                     return SPELL_SPECIFIC_CURSE;
                 // @net-end
 

@@ -1569,7 +1569,6 @@ void World::LoadConfigSettings(bool reload)
 
     // @net-begin: custom-config
     m_int_configs[CONFIG_NET_SPELL_RUPTURE] = sConfigMgr->GetIntDefault("Net.Spell.RUPTURE", 0);
-    // m_int_configs[CONFIG_NET_SPELL_MASTER_POISONER] = sConfigMgr->GetIntDefault("Net.Spell.MASTER_POISONER", 0);
     m_int_configs[CONFIG_NET_SPELL_HEMORRHAGE] = sConfigMgr->GetIntDefault("Net.Spell.HEMORRHAGE", 0);
     m_int_configs[CONFIG_NET_SPELL_FAN_OF_KNIVES] = sConfigMgr->GetIntDefault("Net.Spell.FAN_OF_KNIVES", 0);
     m_int_configs[CONFIG_NET_SPELL_GHOSTLY_STRIKE] = sConfigMgr->GetIntDefault("Net.Spell.GHOSTLY_STRIKE", 0);
@@ -1577,10 +1576,8 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_NET_SPELL_STEALTH_SPELL] = sConfigMgr->GetIntDefault("Net.Spell.STEALTH_SPELL", 0);
     m_int_configs[CONFIG_NET_SPELL_VANISH] = sConfigMgr->GetIntDefault("Net.Spell.VANISH", 0);
     m_int_configs[CONFIG_NET_SPELL_EVISCERATE] = sConfigMgr->GetIntDefault("Net.Spell.EVISCERATE", 0);
-    // m_int_configs[CONFIG_NET_SPELL_OVERKILL] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL", 0);
-    // m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL_EFFECT", 0);
-    m_int_configs[CONFIG_NET_SPELL_OVERKILL] = 58426;
-    m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = 58427;
+    m_int_configs[CONFIG_NET_SPELL_OVERKILL] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL", 0);
+    m_int_configs[CONFIG_NET_SPELL_OVERKILL_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.OVERKILL_EFFECT", 0);
     m_int_configs[CONFIG_NET_SPELL_ENVENOM] = sConfigMgr->GetIntDefault("Net.Spell.ENVENOM", 0);
     m_int_configs[CONFIG_NET_SPELL_DEADLY_POISON_EFFECT] = sConfigMgr->GetIntDefault("Net.Spell.DEADLY_POISON_EFFECT", 0);
     m_int_configs[CONFIG_NET_SPELL_ARCANE_BLAST] = sConfigMgr->GetIntDefault("Net.Spell.ARCANE_BLAST", 0);
@@ -1589,6 +1586,10 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_NET_SPELL_DAMPEN_MAGIC] = sConfigMgr->GetIntDefault("Net.Spell.DAMPEN_MAGIC", 0);
     m_int_configs[CONFIG_NET_SPELL_ARCANE_MISSILES] = sConfigMgr->GetIntDefault("Net.Spell.ARCANE_MISSILES", 0);
     m_int_configs[CONFIG_NET_SPELL_MINOR_ARCANE_MISSILES] = sConfigMgr->GetIntDefault("Net.Spell.MINOR_ARCANE_MISSILES", 0);
+    m_int_configs[CONFIG_NET_SPELL_AGONY] = sConfigMgr->GetIntDefault("Net.Spell.AGONY", 0);
+    m_int_configs[CONFIG_NET_SPELL_MINOR_AGONY] = sConfigMgr->GetIntDefault("Net.Spell.MINOR_AGONY", 0);
+    m_int_configs[CONFIG_NET_SPELL_EXHAUSTION] = sConfigMgr->GetIntDefault("Net.Spell.EXHAUSTION", 0);
+    m_int_configs[CONFIG_NET_SPELL_DOOM] = sConfigMgr->GetIntDefault("Net.Spell.DOOM", 0);
     // @net-end
 
     // call ScriptMgr if we're reloading the configuration
