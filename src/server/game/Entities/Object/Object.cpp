@@ -1696,6 +1696,7 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool implicitDetect, bo
             , TSUnit(const_cast<Unit*>(unit))
             , TSWorldObject(const_cast<WorldObject*>(obj))
             , TSMutable<bool,bool>(&result)
+            , implicitDetect
         )
 
     return result;
